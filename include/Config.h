@@ -18,7 +18,7 @@
 #define EC200U_TX_PIN       17   // ESP32 TX2 (Connect to EC200U RX)
 
 // Cellular Network Configuration
-#define CELLULAR_APN        "iot" // Replace with your SIM card APN (e.g. "airtelgprs.com", "jionet", "www")
+#define CELLULAR_APN        "airtelgprs.com" // Replace with your SIM card APN (e.g. "airtelgprs.com", "jionet", "www")
 
 // Server Telemetry Configuration
 #define SERVER_URL          "http://your-fastapi-backend.com/api/v1/telemetry"
