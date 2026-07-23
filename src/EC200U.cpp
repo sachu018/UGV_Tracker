@@ -7,6 +7,7 @@ EC200U::~EC200U() {}
 
 bool EC200U::begin(HardwareSerial &serial, uint32_t baud, int8_t rxPin, int8_t txPin) {
     _serial = &serial;
+    _serial->setRxBufferSize(1024); // Expand ESP32 UART RX ring buffer to prevent buffer overruns
     _serial->begin(baud, SERIAL_8N1, rxPin, txPin);
     delay(500);
 
