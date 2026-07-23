@@ -7,7 +7,8 @@ EC200U::~EC200U() {}
 
 bool EC200U::begin(HardwareSerial &serial, uint32_t baud, int8_t rxPin, int8_t txPin) {
     _serial = &serial;
-    _serial->setRxBufferSize(1024); // Expand ESP32 UART RX ring buffer to prevent buffer overruns
+    _serial->end(); // Close serial if already open from previous init
+    _serial->setRxBufferSize(1024); // Expand ESP32 UART RX ring buffer
     _serial->begin(baud, SERIAL_8N1, rxPin, txPin);
     delay(500);
 
@@ -281,12 +282,31 @@ bool EC200U::parseQGPSLOC(const String &rawResponse, GPSData &gpsData) {
 
 bool EC200U::activatePDPContext(const String &apn) {
     LOG_INFO("Configuring APN: " + apn);
+    
+    // Check if PDP context is already active
+    String checkResp = sendAT("AT+QIACT?", 2000);
+    if (checkResp.indexOf("+QIACT: 1,1") != -1) {
+        LOG_INFO("PDP context is already active!");
+        return true;
+    }
+
+    // Deactivate context 1 first to ensure a clean state
+    sendAT("AT+QIDEACT=1", 3000);
+
+    // Set APN PDP context 1
     sendAT("AT+QICSGP=1,1,\"" + apn + "\",\"\",\"\",1", 2000);
     
     LOG_INFO("Activating PDP context...");
     String resp = sendAT("AT+QIACT=1", 15000);
     if (resp.indexOf("OK") != -1) {
         LOG_INFO("PDP context activated successfully.");
+        return true;
+    }
+
+    // Verify context activation again in case response output timed out
+    checkResp = sendAT("AT+QIACT?", 2000);
+    if (checkResp.indexOf("+QIACT: 1,1") != -1) {
+        LOG_INFO("PDP context verified active!");
         return true;
     }
 
