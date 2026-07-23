@@ -114,12 +114,12 @@ void Tracker::handleState() {
             tData.state = _state;
 
             int httpCode = 0;
-            bool success = _httpClient.sendToThingSpeak(THINGSPEAK_URL, THINGSPEAK_API_KEY, tData, httpCode);
+            bool success = _httpClient.sendTelemetry(SERVER_URL, tData, httpCode);
             
             if (success) {
-                LOG_INFO("ThingSpeak upload SUCCESSFUL!");
+                LOG_INFO("Custom Backend Telemetry Upload SUCCESSFUL!");
             } else {
-                LOG_ERROR("ThingSpeak upload FAILED (Code: " + String(httpCode) + ")");
+                LOG_ERROR("Custom Backend Upload FAILED (Code: " + String(httpCode) + ")");
             }
 
             // Return to tracking

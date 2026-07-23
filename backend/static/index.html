@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UGV Command Center — Live Telemetry & GPS Tracking</title>
+    
+    <!-- Google Fonts: Outfit & JetBrains Mono -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Leaflet Map CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
+    
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Dashboard Styles -->
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar Controls & Metrics -->
+        <aside class="sidebar">
+            <div class="brand">
+                <div class="logo-icon">
+                    <i class="fa-solid fa-crosshairs"></i>
+                </div>
+                <div class="brand-text">
+                    <h1>UGV TRACKER</h1>
+                    <span class="subtitle">Autonomous Ground Vehicle</span>
+                </div>
+            </div>
+
+            <!-- Status Indicator Card -->
+            <div class="status-card">
+                <div class="status-indicator online" id="statusPulse"></div>
+                <div class="status-info">
+                    <div class="status-title" id="systemState">SYSTEM LIVE</div>
+                    <div class="status-sub" id="lastUpdated">Awaiting telemetry...</div>
+                </div>
+                <span class="device-badge" id="deviceId">UGV-01</span>
+            </div>
+
+            <!-- Grid Telemetry Metrics -->
+            <div class="metrics-grid">
+                <!-- Speed Gauge Card -->
+                <div class="metric-card speed-card">
+                    <div class="card-header">
+                        <i class="fa-solid fa-gauge-high"></i>
+                        <span>VEHICLE SPEED</span>
+                    </div>
+                    <div class="speed-value">
+                        <span id="speedVal">0.0</span>
+                        <small>km/h</small>
+                    </div>
+                    <div class="speed-progress-bg">
+                        <div class="speed-progress-bar" id="speedBar" style="width: 0%;"></div>
+                    </div>
+                </div>
+
+                <!-- Satellites Card -->
+                <div class="metric-card">
+                    <div class="card-header">
+                        <i class="fa-solid fa-satellite"></i>
+                        <span>GNSS SATELLITES</span>
+                    </div>
+                    <div class="metric-value" id="satellitesVal">--</div>
+                    <div class="metric-sub" id="fixStatus">Checking 3D Fix...</div>
+                </div>
+
+                <!-- Signal RSSI Card -->
+                <div class="metric-card">
+                    <div class="card-header">
+                        <i class="fa-solid fa-signal"></i>
+                        <span>LTE SIGNAL</span>
+                    </div>
+                    <div class="metric-value" id="rssiVal">-- CSQ</div>
+                    <div class="signal-bars" id="signalBars">
+                        <span class="bar"></span>
+                        <span class="bar"></span>
+                        <span class="bar"></span>
+                        <span class="bar"></span>
+                    </div>
+                </div>
+
+                <!-- Battery Voltage -->
+                <div class="metric-card">
+                    <div class="card-header">
+                        <i class="fa-solid fa-bolt"></i>
+                        <span>BATTERY</span>
+                    </div>
+                    <div class="metric-value" id="batteryVal">4.2 V</div>
+                    <div class="battery-bar-bg">
+                        <div class="battery-bar" id="batteryBar" style="width: 100%;"></div>
+                    </div>
+                </div>
+
+                <!-- Distance Traveled -->
+                <div class="metric-card span-2">
+                    <div class="card-header">
+                        <i class="fa-solid fa-route"></i>
+                        <span>TOTAL DISTANCE MOVED</span>
+                    </div>
+                    <div class="metric-value highlight" id="distanceVal">0.00 <small>meters</small></div>
+                </div>
+            </div>
+
+            <!-- Position Coordinates Breakdown -->
+            <div class="coordinates-card">
+                <div class="coord-row">
+                    <span class="label"><i class="fa-solid fa-location-dot"></i> LATITUDE</span>
+                    <span class="val" id="latVal">0.000000°</span>
+                </div>
+                <div class="coord-row">
+                    <span class="label"><i class="fa-solid fa-location-dot"></i> LONGITUDE</span>
+                    <span class="val" id="lonVal">0.000000°</span>
+                </div>
+                <div class="coord-row">
+                    <span class="label"><i class="fa-solid fa-mountain"></i> ALTITUDE</span>
+                    <span class="val" id="altVal">0.0 m</span>
+                </div>
+                <div class="coord-row">
+                    <span class="label"><i class="fa-solid fa-compass"></i> HEADING</span>
+                    <span class="val" id="headingVal">0.0°</span>
+                </div>
+            </div>
+
+            <div class="actions">
+                <button class="btn btn-primary" id="btnCenterMap">
+                    <i class="fa-solid fa-bullseye"></i> Center Map
+                </button>
+                <button class="btn btn-secondary" id="btnClearTrail">
+                    <i class="fa-solid fa-trash-can"></i> Clear Trail
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content: Fullscreen Map -->
+        <main class="map-container">
+            <div id="map"></div>
+            
+            <!-- Map Overlay Controls -->
+            <div class="map-overlay-top">
+                <div class="chip"><i class="fa-solid fa-satellite-dish"></i> ESP32 + EC200U-CN Active</div>
+                <div class="chip"><i class="fa-solid fa-layer-group"></i> Dark Vector Map</div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+    <!-- App Logic -->
+    <script src="/static/app.js"></script>
+</body>
+</html>
