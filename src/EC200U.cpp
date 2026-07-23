@@ -365,7 +365,8 @@ bool EC200U::postHTTP(const String &url, const String &jsonPayload, int &httpCod
         while (_serial->available()) {
             char c = (char)_serial->read();
             urcResp += c;
-            if (urcResp.indexOf("+QHTTPPOST:") != -1) {
+            int tagIdx = urcResp.indexOf("+QHTTPPOST:");
+            if (tagIdx != -1 && urcResp.indexOf('\n', tagIdx) != -1) {
                 postOk = true;
                 break;
             }
@@ -443,7 +444,8 @@ bool EC200U::getHTTP(const String &url, int &httpCode, String &responseBody) {
         while (_serial->available()) {
             char c = (char)_serial->read();
             urcResp += c;
-            if (urcResp.indexOf("+QHTTPGET:") != -1) {
+            int tagIdx = urcResp.indexOf("+QHTTPGET:");
+            if (tagIdx != -1 && urcResp.indexOf('\n', tagIdx) != -1) {
                 getOk = true;
                 break;
             }
