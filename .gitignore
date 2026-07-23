@@ -1,0 +1,5 @@
+# PlatformIO build & IDE files
+.pio
+.vscode/
+*.bak
+*.tmp

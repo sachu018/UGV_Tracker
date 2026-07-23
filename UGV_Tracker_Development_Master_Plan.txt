@@ -1,0 +1,125 @@
+UGV Tracker Development Master Plan
+
+Vision
+
+Build a professional ESP32 + Quectel EC200U-CN based standalone UGV
+tracker with: - LTE connectivity - GNSS positioning - HTTP/MQTT
+telemetry - Offline buffering - FastAPI backend - PostgreSQL database -
+React dashboard - Geofencing, trip logging, fleet support
+
+Project Structure
+
+    UGV_Tracker/
+    ├── include/
+    │   ├── Config.h       # Pin definitions, APN, Server URLs, timing constants
+    │   ├── EC200U.h       # Low-level EC200U driver interface & AT commands
+    │   ├── GPS.h          # High-level GPS module interface
+    │   ├── HTTPClient.h   # Telemetry JSON creation & HTTP posting
+    │   ├── Network.h      # Cellular registration & signal monitoring
+    │   ├── Types.h        # GPSData, TelemetryData, TrackerState data types
+    │   └── Tracker.h      # Master Application State Machine
+    ├── src/
+    │   ├── main.cpp       # Minimal entry point (setup & loop)
+    │   ├── EC200U.cpp     # EC200U modem driver implementation
+    │   ├── GPS.cpp        # GPS high-level wrapper implementation
+    │   ├── HTTPClient.cpp # HTTP & JSON serializer implementation
+    │   ├── Network.cpp    # Cellular network helper implementation
+    │   └── Tracker.cpp    # Tracker state machine implementation
+    ├── lib/
+    └── platformio.ini    # ESP32 environment configuration & dependencies
+
+Architecture
+
+ESP32 - Application state machine - Scheduler - JSON creation
+
+EC200U Driver - UART - AT command handling - Network - GPS - HTTP/MQTT
+
+Cloud ESP32 -> HTTP -> FastAPI -> PostgreSQL -> React Dashboard
+
+Development Roadmap
+
+Phase 1 (Completed)
+
+- UART communication setup
+- SIM detection verified
+- LTE registration verified
+- Internet connectivity verified
+- NTP sync verified
+- GPS Fix verified
+
+Phase 2 (Completed)
+
+Goal: Build a modular, reusable EC200U driver & tracker subsystem architecture.
+
+Functions Implemented:
+- begin(serial, baud, rxPin, txPin)
+- sendAT(cmd, timeoutMs)
+- waitForResponse(expected, timeoutMs)
+- checkSIM()
+- waitForNetwork(timeoutMs)
+- getSignalStrength()
+- enableGPS()
+- disableGPS()
+- getLocation(gpsData)
+- parseQGPSLOC() for NMEA & decimal coordinate parsing
+- activatePDPContext(apn)
+- postHTTP(url, jsonPayload, httpCode, responseBody)
+
+Data structures added in Types.h:
+- GPSData (latitude, longitude, altitude, speed, heading, hdop, satellites, utc, valid)
+- TrackerState enum (BOOT, CHECK_SIM, WAIT_NETWORK, ENABLE_GPS, WAIT_GPS_FIX, TRACK, UPLOAD, ERROR_STATE)
+- TelemetryData struct
+
+Phase 3 (Current)
+
+Goal: Hardware testing & field validation of state machine transitions.
+State Sequence: BOOT -> CHECK_SIM -> WAIT_NETWORK -> ENABLE_GPS -> WAIT_GPS_FIX -> TRACK -> UPLOAD -> repeat
+
+Phase 4 (Next)
+
+HTTP POST Telemetry payload & backend API integration:
+JSON Fields: device_id, timestamp, latitude, longitude, altitude, speed, heading, hdop, satellites, fix_valid, rssi, battery, state
+
+Phase 5
+
+Backend Development:
+- FastAPI REST service
+- PostgreSQL / TimescaleDB database
+- Telemetry ingestion endpoints
+- Device authentication
+
+Phase 6
+
+Frontend Dashboard:
+- Live map tracking (Leaflet/Mapbox)
+- Vehicle status display
+- Speedometer & heading compass
+- Route history & daily distance stats
+- Battery & signal indicators
+
+Phase 7
+
+Advanced Features:
+- Geofencing alerts
+- Anti-theft motion detection
+- Offline Flash/SD logging & auto-sync when network reconnects
+- OTA Firmware Updates over LTE
+- Multi-vehicle Fleet Management
+
+Coding Rules
+
+1. main.cpp should only initialize and call update().
+2. Never place raw AT commands outside EC200U.cpp.
+3. Separate hardware, networking and application logic.
+4. Test each module independently.
+5. Commit to Git after each completed phase.
+
+Immediate Next Steps
+
+1. Configure hardware pins in include/Config.h (RX pin, TX pin, APN).
+2. Open project in VSCode + PlatformIO extension.
+3. Upload firmware to ESP32 board and open Serial Monitor (115200 baud).
+4. Verify initial state machine execution from BOOT to WAIT_GPS_FIX.
+5. Proceed to Phase 4 (FastAPI backend server creation).
+
+This document is intended to evolve as the project grows.
