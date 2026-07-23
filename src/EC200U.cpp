@@ -401,10 +401,18 @@ bool EC200U::postHTTP(const String &url, const String &jsonPayload, int &httpCod
 }
 
 bool EC200U::getHTTP(const String &url, int &httpCode, String &responseBody) {
-    LOG_INFO("Posting to URL: " + url);
+    LOG_INFO("GET Request URL: " + url);
 
     sendAT("AT+QHTTPCFG=\"contextid\",1", 1000);
     sendAT("AT+QHTTPCFG=\"responseheader\",0", 1000);
+
+    if (url.startsWith("https://")) {
+        sendAT("AT+QSSLCFG=\"sslversion\",1,4", 1000);
+        sendAT("AT+QSSLCFG=\"seclevel\",1,0", 1000);
+        sendAT("AT+QHTTPCFG=\"sslctxid\",1", 1000);
+    } else {
+        sendAT("AT+QHTTPCFG=\"sslctxid\",0", 1000);
+    }
 
     while (_serial->available()) _serial->read();
 

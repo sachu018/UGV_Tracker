@@ -21,8 +21,8 @@
 #define CELLULAR_APN        "airtelgprs.com" // Replace with your SIM card APN
 
 // ThingSpeak Cloud Telemetry Configuration
-#define THINGSPEAK_URL      "http://api.thingspeak.com/update"
-#define THINGSPEAK_API_KEY  "YOUR_THINGSPEAK_WRITE_API_KEY" // Paste your Write API key here
+#define THINGSPEAK_URL      "https://api.thingspeak.com/update"
+#define THINGSPEAK_API_KEY  "URP875F2003RSKLM" // Write API key
 #define DEVICE_ID           "UGV-TRACKER-01"
 
 // Timing & Retries (ThingSpeak requires at least 15 seconds between updates)
