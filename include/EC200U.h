@@ -29,6 +29,7 @@ public:
     // Data / Internet operations
     bool activatePDPContext(const String &apn);
     bool postHTTP(const String &url, const String &jsonPayload, int &httpCode, String &responseBody);
+    bool getHTTP(const String &url, int &httpCode, String &responseBody);
 
 private:
     HardwareSerial* _serial;

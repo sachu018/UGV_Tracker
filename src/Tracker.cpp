@@ -110,16 +110,16 @@ void Tracker::handleState() {
             tData.deviceId = DEVICE_ID;
             tData.gps = _gps.getData();
             tData.signalRssi = _network.getSignalStrength();
-            tData.batteryVoltage = 4.2; // Example / Monitored ADC voltage
+            tData.batteryVoltage = 4.2; // Monitored battery voltage
             tData.state = _state;
 
             int httpCode = 0;
-            bool success = _httpClient.sendTelemetry(SERVER_URL, tData, httpCode);
+            bool success = _httpClient.sendToThingSpeak(THINGSPEAK_URL, THINGSPEAK_API_KEY, tData, httpCode);
             
             if (success) {
-                LOG_INFO("Telemetry upload SUCCESSFUL!");
+                LOG_INFO("ThingSpeak upload SUCCESSFUL!");
             } else {
-                LOG_ERROR("Telemetry upload FAILED (Code: " + String(httpCode) + ")");
+                LOG_ERROR("ThingSpeak upload FAILED (Code: " + String(httpCode) + ")");
             }
 
             // Return to tracking

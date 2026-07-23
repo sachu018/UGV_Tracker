@@ -11,6 +11,7 @@ public:
     explicit TrackerHTTPClient(EC200U &modem);
 
     bool sendTelemetry(const String &url, const TelemetryData &data, int &httpCode);
+    bool sendToThingSpeak(const String &baseUrl, const String &apiKey, const TelemetryData &data, int &httpCode);
     String createTelemetryJSON(const TelemetryData &data);
 
 private:

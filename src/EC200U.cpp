@@ -295,6 +295,9 @@ bool EC200U::activatePDPContext(const String &apn) {
 
     // Set APN PDP context 1
     sendAT("AT+QICSGP=1,1,\"" + apn + "\",\"\",\"\",1", 2000);
+
+    // Configure Google Public DNS for reliable DNS resolution over LTE
+    sendAT("AT+QIDNSCFG=1,\"8.8.8.8\",\"8.8.4.4\"", 2000);
     
     LOG_INFO("Activating PDP context...");
     String resp = sendAT("AT+QIACT=1", 15000);
@@ -394,5 +397,73 @@ bool EC200U::postHTTP(const String &url, const String &jsonPayload, int &httpCod
 
     // 3. Read HTTP Response Body
     sendAT("AT+QHTTPREAD=80", 5000);
+    return (httpCode == 200 || httpCode == 201);
+}
+
+bool EC200U::getHTTP(const String &url, int &httpCode, String &responseBody) {
+    LOG_INFO("Posting to URL: " + url);
+
+    sendAT("AT+QHTTPCFG=\"contextid\",1", 1000);
+    sendAT("AT+QHTTPCFG=\"responseheader\",0", 1000);
+
+    while (_serial->available()) _serial->read();
+
+    // 1. Set URL
+    String cmdUrl = "AT+QHTTPURL=" + String(url.length()) + ",80";
+    _serial->println(cmdUrl);
+    if (!waitForResponse("CONNECT", 5000)) {
+        LOG_ERROR("Failed to enter HTTP URL connect mode");
+        while (_serial->available()) _serial->read();
+        return false;
+    }
+
+    _serial->print(url);
+    if (!waitForResponse("OK", 5000)) {
+        LOG_ERROR("Failed to set HTTP URL");
+        while (_serial->available()) _serial->read();
+        return false;
+    }
+
+    // 2. Perform GET
+    _serial->println("AT+QHTTPGET=80");
+    
+    uint32_t start = millis();
+    String urcResp = "";
+    bool getOk = false;
+
+    while (millis() - start < 15000) {
+        while (_serial->available()) {
+            char c = (char)_serial->read();
+            urcResp += c;
+            if (urcResp.indexOf("+QHTTPGET:") != -1) {
+                getOk = true;
+                break;
+            }
+        }
+        if (getOk) break;
+    }
+
+    if (!getOk) {
+        LOG_ERROR("HTTP GET timeout");
+        while (_serial->available()) _serial->read();
+        return false;
+    }
+
+    int qIdx = urcResp.indexOf("+QHTTPGET:");
+    if (qIdx != -1) {
+        String sub = urcResp.substring(qIdx + 10);
+        int comma1 = sub.indexOf(',');
+        if (comma1 != -1) {
+            int comma2 = sub.indexOf(',', comma1 + 1);
+            if (comma2 != -1) {
+                String codeStr = sub.substring(comma1 + 1, comma2);
+                httpCode = codeStr.toInt();
+            }
+        }
+    }
+
+    LOG_INFO("HTTP Response Code: " + String(httpCode));
+    sendAT("AT+QHTTPREAD=80", 5000);
+    while (_serial->available()) _serial->read();
     return (httpCode == 200 || httpCode == 201);
 }
