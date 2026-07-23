@@ -3,18 +3,17 @@ UGV Tracker Development Master Plan
 Vision
 
 Build a professional ESP32 + Quectel EC200U-CN based standalone UGV
-tracker with: - LTE connectivity - GNSS positioning - HTTP/MQTT
-telemetry - Offline buffering - FastAPI backend - PostgreSQL database -
-React dashboard - Geofencing, trip logging, fleet support
+tracker starting with ThingSpeak cloud prototyping, progressing to a custom 
+FastAPI backend, PostgreSQL database, and React live map dashboard.
 
 Project Structure
 
     UGV_Tracker/
     ├── include/
-    │   ├── Config.h       # Pin definitions, APN, Server URLs, timing constants
+    │   ├── Config.h       # Pin definitions, APN, ThingSpeak API Key, timing constants
     │   ├── EC200U.h       # Low-level EC200U driver interface & AT commands
     │   ├── GPS.h          # High-level GPS module interface
-    │   ├── HTTPClient.h   # Telemetry JSON creation & HTTP posting
+    │   ├── HTTPClient.h   # Telemetry formatting & HTTP client
     │   ├── Network.h      # Cellular registration & signal monitoring
     │   ├── Types.h        # GPSData, TelemetryData, TrackerState data types
     │   └── Tracker.h      # Master Application State Machine
@@ -22,104 +21,55 @@ Project Structure
     │   ├── main.cpp       # Minimal entry point (setup & loop)
     │   ├── EC200U.cpp     # EC200U modem driver implementation
     │   ├── GPS.cpp        # GPS high-level wrapper implementation
-    │   ├── HTTPClient.cpp # HTTP & JSON serializer implementation
+    │   ├── HTTPClient.cpp # HTTP & ThingSpeak uploader implementation
     │   ├── Network.cpp    # Cellular network helper implementation
     │   └── Tracker.cpp    # Tracker state machine implementation
     ├── lib/
-    └── platformio.ini    # ESP32 environment configuration & dependencies
+    └── platformio.ini     # ESP32 environment configuration & dependencies
 
-Architecture
-
-ESP32 - Application state machine - Scheduler - JSON creation
-
-EC200U Driver - UART - AT command handling - Network - GPS - HTTP/MQTT
-
-Cloud ESP32 -> HTTP -> FastAPI -> PostgreSQL -> React Dashboard
-
-Development Roadmap
+Development Roadmap & Progressive Path
 
 Phase 1 (Completed)
-
 - UART communication setup
 - SIM detection verified
 - LTE registration verified
 - Internet connectivity verified
 - NTP sync verified
-- GPS Fix verified
+- GPS Fix verified (14-16 Satellites locked at 10.8086°N, 76.7403°E)
 
 Phase 2 (Completed)
+- Modular C++ architecture (.h / .cpp separation)
+- EC200U driver implementation
+- GPS coordinate & NMEA parsing
+- State Machine (BOOT -> CHECK_SIM -> WAIT_NETWORK -> ENABLE_GPS -> WAIT_GPS_FIX -> TRACK -> UPLOAD)
 
-Goal: Build a modular, reusable EC200U driver & tracker subsystem architecture.
+Phase 3 (Current Goal: ThingSpeak Cloud Integration)
+Goal: Live cloud visualization via ThingSpeak.
+- Configure DNS servers (AT+QIDNSCFG=1,"8.8.8.8","8.8.4.4") on EC200U modem.
+- Send GPS & sensor telemetry to ThingSpeak channel fields:
+  - Field 1: Latitude
+  - Field 2: Longitude
+  - Field 3: Speed (km/h)
+  - Field 4: Satellites
+  - Field 5: Altitude
+  - Field 6: Signal Strength (RSSI)
+  - Field 7: Battery Voltage
+- 15-second telemetry upload interval (ThingSpeak rate limit compliance).
 
-Functions Implemented:
-- begin(serial, baud, rxPin, txPin)
-- sendAT(cmd, timeoutMs)
-- waitForResponse(expected, timeoutMs)
-- checkSIM()
-- waitForNetwork(timeoutMs)
-- getSignalStrength()
-- enableGPS()
-- disableGPS()
-- getLocation(gpsData)
-- parseQGPSLOC() for NMEA & decimal coordinate parsing
-- activatePDPContext(apn)
-- postHTTP(url, jsonPayload, httpCode, responseBody)
+Phase 4 (Next: Custom FastAPI Backend)
+- Build Python FastAPI REST server.
+- Receive JSON telemetry over HTTP POST.
+- Save historical telemetry into PostgreSQL / SQLite database.
 
-Data structures added in Types.h:
-- GPSData (latitude, longitude, altitude, speed, heading, hdop, satellites, utc, valid)
-- TrackerState enum (BOOT, CHECK_SIM, WAIT_NETWORK, ENABLE_GPS, WAIT_GPS_FIX, TRACK, UPLOAD, ERROR_STATE)
-- TelemetryData struct
-
-Phase 3 (Current)
-
-Goal: Hardware testing & field validation of state machine transitions.
-State Sequence: BOOT -> CHECK_SIM -> WAIT_NETWORK -> ENABLE_GPS -> WAIT_GPS_FIX -> TRACK -> UPLOAD -> repeat
-
-Phase 4 (Next)
-
-HTTP POST Telemetry payload & backend API integration:
-JSON Fields: device_id, timestamp, latitude, longitude, altitude, speed, heading, hdop, satellites, fix_valid, rssi, battery, state
-
-Phase 5
-
-Backend Development:
-- FastAPI REST service
-- PostgreSQL / TimescaleDB database
-- Telemetry ingestion endpoints
-- Device authentication
-
-Phase 6
-
-Frontend Dashboard:
-- Live map tracking (Leaflet/Mapbox)
-- Vehicle status display
-- Speedometer & heading compass
-- Route history & daily distance stats
-- Battery & signal indicators
-
-Phase 7
-
-Advanced Features:
-- Geofencing alerts
-- Anti-theft motion detection
-- Offline Flash/SD logging & auto-sync when network reconnects
-- OTA Firmware Updates over LTE
-- Multi-vehicle Fleet Management
+Phase 5 (Full Custom React Dashboard)
+- Interactive web dashboard (Leaflet.js / OpenStreetMap).
+- Live UGV vehicle marker animation.
+- Speedometer, battery indicator, route history replay, and geofencing.
 
 Coding Rules
 
 1. main.cpp should only initialize and call update().
 2. Never place raw AT commands outside EC200U.cpp.
-3. Separate hardware, networking and application logic.
-4. Test each module independently.
-5. Commit to Git after each completed phase.
-
-Immediate Next Steps
-
-1. Configure hardware pins in include/Config.h (RX pin, TX pin, APN).
-2. Open project in VSCode + PlatformIO extension.
-3. Upload firmware to ESP32 board and open Serial Monitor (115200 baud).
-4. Verify initial state machine execution from BOOT to WAIT_GPS_FIX.
-5. Proceed to Phase 4 (FastAPI backend server creation).
-
-This document is intended to evolve as the project grows.
+3. Separate hardware, networking, and application logic.
+4. Test each module independently before moving to next phase.
+5. Commit to Git after each completed milestone.
