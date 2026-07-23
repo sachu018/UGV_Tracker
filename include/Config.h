@@ -21,7 +21,7 @@
 #define CELLULAR_APN        "airtelgprs.com" // Replace with your SIM card APN (e.g. "airtelgprs.com", "jionet", "www")
 
 // Server Telemetry Configuration
-#define SERVER_URL          "http://your-fastapi-backend.com/api/v1/telemetry"
+#define SERVER_URL          "http://httpbin.org/post"
 #define DEVICE_ID           "UGV-TRACKER-01"
 
 // Timing & Retries

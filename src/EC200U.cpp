@@ -317,11 +317,19 @@ bool EC200U::activatePDPContext(const String &apn) {
 bool EC200U::postHTTP(const String &url, const String &jsonPayload, int &httpCode, String &responseBody) {
     LOG_INFO("Posting Telemetry to URL: " + url);
 
+    // Set PDP context for HTTP operations
+    sendAT("AT+QHTTPCFG=\"contextid\",1", 1000);
+    sendAT("AT+QHTTPCFG=\"requestheader\",0", 1000);
+
+    // Clear buffer before sending command
+    while (_serial->available()) _serial->read();
+
     // 1. Set URL length
     String cmdUrl = "AT+QHTTPURL=" + String(url.length()) + ",80";
     _serial->println(cmdUrl);
     if (!waitForResponse("CONNECT", 5000)) {
         LOG_ERROR("Failed to enter HTTP URL connect mode");
+        while (_serial->available()) _serial->read();
         return false;
     }
 
@@ -329,6 +337,7 @@ bool EC200U::postHTTP(const String &url, const String &jsonPayload, int &httpCod
     _serial->print(url);
     if (!waitForResponse("OK", 5000)) {
         LOG_ERROR("Failed to set HTTP URL");
+        while (_serial->available()) _serial->read();
         return false;
     }
 
@@ -337,6 +346,7 @@ bool EC200U::postHTTP(const String &url, const String &jsonPayload, int &httpCod
     _serial->println(cmdPost);
     if (!waitForResponse("CONNECT", 5000)) {
         LOG_ERROR("Failed to enter HTTP POST connect mode");
+        while (_serial->available()) _serial->read();
         return false;
     }
 
@@ -362,6 +372,7 @@ bool EC200U::postHTTP(const String &url, const String &jsonPayload, int &httpCod
 
     if (!postOk) {
         LOG_ERROR("HTTP POST timeout or failed.");
+        while (_serial->available()) _serial->read();
         return false;
     }
 
