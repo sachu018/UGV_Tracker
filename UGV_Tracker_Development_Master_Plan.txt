@@ -3,17 +3,25 @@ UGV Tracker Development Master Plan
 Vision
 
 Build a professional ESP32 + Quectel EC200U-CN based standalone UGV
-tracker starting with ThingSpeak cloud prototyping, progressing to a custom 
-FastAPI backend, PostgreSQL database, and React live map dashboard.
+tracker with a custom FastAPI backend, SQLite persistent database,
+and a dark glassmorphic Leaflet live map web dashboard.
 
 Project Structure
 
     UGV_Tracker/
+    ├── backend/           # Python FastAPI Server & Dashboard App
+    │   ├── main.py        # FastAPI API application & routes
+    │   ├── database.py    # SQLite database storage & queries
+    │   ├── ugv_tracker.db # Persistent SQLite database
+    │   └── static/
+    │       ├── index.html # Dark Mode Command Center UI
+    │       ├── style.css  # Glassmorphic CSS Design System
+    │       └── app.js     # Leaflet Map & Telemetry Poller
     ├── include/
-    │   ├── Config.h       # Pin definitions, APN, ThingSpeak API Key, timing constants
+    │   ├── Config.h       # Pin definitions, APN, Server URLs, timing constants
     │   ├── EC200U.h       # Low-level EC200U driver interface & AT commands
     │   ├── GPS.h          # High-level GPS module interface
-    │   ├── HTTPClient.h   # Telemetry formatting & HTTP client
+    │   ├── HTTPClient.h   # Telemetry JSON formatting & HTTP client
     │   ├── Network.h      # Cellular registration & signal monitoring
     │   ├── Types.h        # GPSData, TelemetryData, TrackerState data types
     │   └── Tracker.h      # Master Application State Machine
@@ -21,13 +29,13 @@ Project Structure
     │   ├── main.cpp       # Minimal entry point (setup & loop)
     │   ├── EC200U.cpp     # EC200U modem driver implementation
     │   ├── GPS.cpp        # GPS high-level wrapper implementation
-    │   ├── HTTPClient.cpp # HTTP & ThingSpeak uploader implementation
+    │   ├── HTTPClient.cpp # HTTP serializer implementation
     │   ├── Network.cpp    # Cellular network helper implementation
     │   └── Tracker.cpp    # Tracker state machine implementation
     ├── lib/
     └── platformio.ini     # ESP32 environment configuration & dependencies
 
-Development Roadmap & Progressive Path
+Development Roadmap & Progress
 
 Phase 1 (Completed)
 - UART communication setup
@@ -43,28 +51,26 @@ Phase 2 (Completed)
 - GPS coordinate & NMEA parsing
 - State Machine (BOOT -> CHECK_SIM -> WAIT_NETWORK -> ENABLE_GPS -> WAIT_GPS_FIX -> TRACK -> UPLOAD)
 
-Phase 3 (Current Goal: ThingSpeak Cloud Integration)
-Goal: Live cloud visualization via ThingSpeak.
-- Configure DNS servers (AT+QIDNSCFG=1,"8.8.8.8","8.8.4.4") on EC200U modem.
-- Send GPS & sensor telemetry to ThingSpeak channel fields:
-  - Field 1: Latitude
-  - Field 2: Longitude
-  - Field 3: Speed (km/h)
-  - Field 4: Satellites
-  - Field 5: Altitude
-  - Field 6: Signal Strength (RSSI)
-  - Field 7: Battery Voltage
-- 15-second telemetry upload interval (ThingSpeak rate limit compliance).
+Phase 3 (Completed)
+- Cloud telemetry upload verified (HTTP 200 OK responses over LTE)
+- Google DNS (8.8.8.8) configuration added
 
-Phase 4 (Next: Custom FastAPI Backend)
-- Build Python FastAPI REST server.
-- Receive JSON telemetry over HTTP POST.
-- Save historical telemetry into PostgreSQL / SQLite database.
+Phase 4 (Completed)
+- Built Python FastAPI REST server (`backend/main.py`).
+- SQLite persistent storage (`backend/database.py`).
+- API endpoints: `/api/v1/telemetry`, `/api/v1/telemetry/latest`, `/api/v1/telemetry/history`.
 
-Phase 5 (Full Custom React Dashboard)
-- Interactive web dashboard (Leaflet.js / OpenStreetMap).
-- Live UGV vehicle marker animation.
-- Speedometer, battery indicator, route history replay, and geofencing.
+Phase 5 (Completed)
+- Custom Dark Mode Command Center Web Dashboard (`backend/static/`).
+- Interactive Leaflet.js Vector Map with CartoDB Dark tiles.
+- Real-time animated UGV vehicle marker & glowing path trail.
+- Digital Speedometer (km/h), Satellite counter, LTE Signal meter, Battery level & Haversine distance calculator.
+
+Phase 6 (Next: Advanced Features)
+- Geofencing boundaries & alerts
+- Anti-theft motion detection
+- Offline SD/Flash buffering when out of cellular coverage
+- Fleet management support
 
 Coding Rules
 
