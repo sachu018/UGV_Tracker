@@ -18,6 +18,7 @@ def init_db():
             heading REAL,
             hdop REAL,
             satellites INTEGER,
+            fix_mode INTEGER DEFAULT 0,
             fix_valid INTEGER,
             rssi INTEGER,
             battery REAL,
@@ -25,6 +26,11 @@ def init_db():
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     ''')
+    # Auto-add fix_mode column if upgrading existing database
+    try:
+        cursor.execute("ALTER TABLE telemetry ADD COLUMN fix_mode INTEGER DEFAULT 0")
+    except Exception:
+        pass
     conn.commit()
     conn.close()
 
@@ -34,8 +40,8 @@ def save_telemetry(data: dict):
     cursor.execute('''
         INSERT INTO telemetry (
             device_id, timestamp, latitude, longitude, altitude,
-            speed, heading, hdop, satellites, fix_valid, rssi, battery, state
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            speed, heading, hdop, satellites, fix_mode, fix_valid, rssi, battery, state
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ''', (
         data.get("device_id", "UGV-TRACKER-01"),
         data.get("timestamp", ""),
@@ -46,6 +52,7 @@ def save_telemetry(data: dict):
         data.get("heading", 0.0),
         data.get("hdop", 0.0),
         data.get("satellites", 0),
+        data.get("fix_mode", 3 if data.get("fix_valid", True) else 0),
         1 if data.get("fix_valid", True) else 0,
         data.get("rssi", 0),
         data.get("battery", 4.2),

@@ -52,6 +52,7 @@ async def receive_get_telemetry(
     field5: float = 0.0, # Altitude
     field6: int = 0,     # RSSI
     field7: float = 4.2, # Battery
+    field8: int = 3,     # Fix Mode (0=No Fix, 2=2D, 3=3D, 4=DGPS)
     device_id: str = "UGV-TRACKER-01"
 ):
     data = {
@@ -63,6 +64,7 @@ async def receive_get_telemetry(
         "altitude": field5,
         "rssi": field6,
         "battery": field7,
+        "fix_mode": field8,
         "fix_valid": True if field1 != 0 and field2 != 0 else False
     }
     database.save_telemetry(data)

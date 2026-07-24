@@ -13,6 +13,7 @@ struct GPSData {
     float heading = 0.0;         // Course over ground in degrees (0..360)
     float hdop = 0.0;            // Horizontal Dilution of Precision
     int satellites = 0;          // Number of active satellites
+    int fixMode = 0;             // 0=No Fix, 2=2D Fix, 3=3D Fix, 4=DGPS
     String utc = "";             // ISO / UTC timestamp string
 };
 

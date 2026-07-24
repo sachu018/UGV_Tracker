@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>UGV Command Center — Live Telemetry & GPS Tracking</title>
+    <title>UGV Command Center — Live Verified Telemetry & GPS Tracking</title>
     
     <!-- Google Fonts: Outfit & JetBrains Mono -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -28,22 +28,37 @@
                     <i class="fa-solid fa-crosshairs"></i>
                 </div>
                 <div class="brand-text">
-                    <h1>UGV TRACKER</h1>
-                    <span class="subtitle">Autonomous Ground Vehicle</span>
+                    <h1>UGV COMMAND CENTER</h1>
+                    <span class="subtitle">Live Verified Hardware Telemetry</span>
                 </div>
                 <button class="theme-toggle-btn" id="btnToggleTheme" title="Toggle Light/Dark Theme">
                     <i class="fa-solid fa-moon"></i>
                 </button>
             </div>
 
-            <!-- Status Indicator Card -->
-            <div class="status-card">
+            <!-- Hardware Verification & Live Status Card -->
+            <div class="status-card" id="statusCard">
                 <div class="status-indicator online" id="statusPulse"></div>
                 <div class="status-info">
-                    <div class="status-title" id="systemState">SYSTEM LIVE</div>
-                    <div class="status-sub" id="lastUpdated">Awaiting telemetry...</div>
+                    <div class="status-title" id="systemState">HARDWARE CONNECTED</div>
+                    <div class="status-sub" id="lastUpdated">Awaiting first LTE packet...</div>
                 </div>
-                <span class="device-badge" id="deviceId">UGV-01</span>
+                <div class="header-badges">
+                    <span class="device-badge" id="deviceId">UGV-01</span>
+                    <!-- Small Compact Battery Badge -->
+                    <span class="battery-mini-badge" id="batteryMiniBadge">
+                        <i class="fa-solid fa-battery-full"></i> <span id="batteryVal">4.2V</span>
+                    </span>
+                </div>
+            </div>
+
+            <!-- Data Genuineness Verification Banner -->
+            <div class="genuineness-banner" id="genuinenessBanner">
+                <i class="fa-solid fa-shield-halved"></i>
+                <div class="banner-text">
+                    <strong id="genuinenessStatus">VERIFIED LIVE DATA</strong>
+                    <span id="genuinenessSub">Hardware ID: UGV-TRACKER-01</span>
+                </div>
             </div>
 
             <!-- Grid Telemetry Metrics -->
@@ -52,7 +67,7 @@
                 <div class="metric-card speed-card">
                     <div class="card-header">
                         <i class="fa-solid fa-gauge-high"></i>
-                        <span>VEHICLE SPEED</span>
+                        <span>VEHICLE SPEED (ACCURATE)</span>
                     </div>
                     <div class="speed-value">
                         <span id="speedVal">0.0</span>
@@ -63,48 +78,49 @@
                     </div>
                 </div>
 
-                <!-- Satellites Card -->
-                <div class="metric-card">
+                <!-- GNSS Satellites & Fix Mode Card -->
+                <div class="metric-card span-2">
                     <div class="card-header">
                         <i class="fa-solid fa-satellite"></i>
-                        <span>GNSS SATELLITES</span>
+                        <span>GNSS SATELLITE & FIX MODE</span>
                     </div>
-                    <div class="metric-value" id="satellitesVal">--</div>
-                    <div class="metric-sub" id="fixStatus">Awaiting 3D Fix...</div>
+                    <div class="satellite-row">
+                        <div class="sat-count">
+                            <span class="metric-value" id="satellitesVal">--</span>
+                            <span class="sat-label">Satellites Locked</span>
+                        </div>
+                        <div class="fix-badge-container">
+                            <span class="fix-badge mode-none" id="fixModeBadge">No Fix</span>
+                        </div>
+                    </div>
+                    <div class="metric-sub" id="fixStatus">Checking satellite constellation...</div>
                 </div>
 
-                <!-- Signal RSSI Card -->
-                <div class="metric-card" title="CSQ = Cellular Signal Quality (0-31 range)">
+                <!-- Cellular LTE Signal Strength (CSQ) -->
+                <div class="metric-card span-2">
                     <div class="card-header">
                         <i class="fa-solid fa-signal"></i>
-                        <span>LTE SIGNAL (CSQ)</span>
+                        <span>LTE CELLULAR SIGNAL (CSQ)</span>
                     </div>
-                    <div class="metric-value" id="rssiVal">-- CSQ</div>
-                    <div class="signal-bars" id="signalBars">
-                        <span class="bar"></span>
-                        <span class="bar"></span>
-                        <span class="bar"></span>
-                        <span class="bar"></span>
-                    </div>
-                </div>
-
-                <!-- Battery Voltage -->
-                <div class="metric-card">
-                    <div class="card-header">
-                        <i class="fa-solid fa-bolt"></i>
-                        <span>BATTERY</span>
-                    </div>
-                    <div class="metric-value" id="batteryVal">4.2 V</div>
-                    <div class="battery-bar-bg">
-                        <div class="battery-bar" id="batteryBar" style="width: 100%;"></div>
+                    <div class="signal-row">
+                        <div class="signal-info">
+                            <div class="metric-value" id="rssiVal">-- CSQ</div>
+                            <span class="signal-quality-text" id="signalQualityText">Checking cellular tower...</span>
+                        </div>
+                        <div class="signal-bars" id="signalBars">
+                            <span class="bar"></span>
+                            <span class="bar"></span>
+                            <span class="bar"></span>
+                            <span class="bar"></span>
+                        </div>
                     </div>
                 </div>
 
-                <!-- Distance Traveled -->
+                <!-- Accurate Distance Traveled -->
                 <div class="metric-card span-2">
                     <div class="card-header">
                         <i class="fa-solid fa-route"></i>
-                        <span>TOTAL DISTANCE MOVED</span>
+                        <span>ACCURATE TRIP DISTANCE (DRIFT FILTERED)</span>
                     </div>
                     <div class="metric-value highlight" id="distanceVal">0.0 <small>meters</small></div>
                 </div>

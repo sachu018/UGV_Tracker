@@ -124,6 +124,7 @@ void Tracker::handleState() {
                          "&field5=" + String(tData.gps.altitude, 1) +
                          "&field6=" + String(tData.signalRssi) +
                          "&field7=" + String(tData.batteryVoltage, 2) +
+                         "&field8=" + String(tData.gps.fixMode) +
                          "&device_id=" + tData.deviceId;
 
             LOG_INFO("Uploading Telemetry to FastAPI Backend...");

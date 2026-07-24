@@ -241,7 +241,8 @@ bool EC200U::parseQGPSLOC(const String &rawResponse, GPSData &gpsData) {
     String satStr  = tokens[10];
 
     int fixMode = fixStr.toInt();
-    if (fixMode == 2 || fixMode == 3) {
+    gpsData.fixMode = fixMode;
+    if (fixMode >= 2) {
         gpsData.valid = true;
     } else {
         gpsData.valid = false;
@@ -261,8 +262,15 @@ bool EC200U::parseQGPSLOC(const String &rawResponse, GPSData &gpsData) {
     gpsData.hdop       = hdopStr.toFloat();
     gpsData.altitude   = altStr.toFloat();
     gpsData.heading    = cogStr.toFloat();
-    gpsData.speed      = spkStr.toFloat();
     gpsData.satellites = satStr.toInt();
+
+    // Noise Filter: If reported speed is under 2.0 km/h or HDOP is high (> 2.5), treat speed as 0.0 km/h
+    float rawSpeed = spkStr.toFloat();
+    if (rawSpeed < 2.0f || gpsData.hdop > 2.5f || gpsData.satellites < 5) {
+        gpsData.speed = 0.0f;
+    } else {
+        gpsData.speed = rawSpeed;
+    }
 
     // Format UTC timestamp string: YYYY-MM-DD HH:MM:SS
     if (dateStr.length() == 6 && utcTime.length() >= 6) {
