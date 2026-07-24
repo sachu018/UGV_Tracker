@@ -1,4 +1,4 @@
-// UGV Command Center — Verified Telemetry & Stationary Deadband Filtering
+// UGV FleetTrack — Mobile Dashboard Logic & Indoor Noise Hardening
 
 let map;
 let marker;
@@ -7,12 +7,13 @@ let currentTileLayer = null;
 let pathCoordinates = [];
 let totalDistanceMeters = 0.0;
 
-// Stationary Deadband Anchoring (Eliminates stationary GPS drift spiderweb)
+// Strict Indoor & Stationary Noise Hardening Thresholds
 let anchorLat = null;
 let anchorLon = null;
-const STATIONARY_DEADBAND_METERS = 12.0;
-
-let lastPacketId = null;
+const DISPLACEMENT_THRESHOLD_METERS = 15.0; // Requires at least 15m real movement
+const SPEED_THRESHOLD_KMH = 3.5;           // Ignores speed noise < 3.5 km/h
+const MAX_ALLOWED_HDOP = 1.8;               // Ignores indoor multipath noise HDOP > 1.8
+const MIN_REQUIRED_SATELLITES = 7;           // Requires at least 7 satellite locks
 
 const mapLayers = {
     google_roadmap: 'https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',
@@ -53,8 +54,8 @@ function initMap() {
         className: 'ugv-custom-marker',
         html: `
             <div style="
-                width: 34px;
-                height: 34px;
+                width: 36px;
+                height: 36px;
                 background: linear-gradient(135deg, #0284C7, #2563EB);
                 border: 3px solid #FFFFFF;
                 border-radius: 50%;
@@ -63,13 +64,13 @@ function initMap() {
                 align-items: center;
                 justify-content: center;
                 color: #FFF;
-                font-size: 15px;
+                font-size: 16px;
             ">
                 <i class="fa-solid fa-car"></i>
             </div>
         `,
-        iconSize: [34, 34],
-        iconAnchor: [17, 17]
+        iconSize: [36, 36],
+        iconAnchor: [18, 18]
     });
 
     marker = L.marker([initialLat, initialLon], { icon: ugvIcon }).addTo(map);
@@ -117,8 +118,8 @@ async function fetchHistory() {
                 if (lat && lon && lat !== 0 && lon !== 0) {
                     if (anchorLat !== null && anchorLon !== null) {
                         const dist = haversineDistance(anchorLat, anchorLon, lat, lon);
-                        // Strict Deadband Filtering: Require 12m displacement & 3.0 km/h speed
-                        if (dist >= STATIONARY_DEADBAND_METERS && dist < 500 && sats >= 6 && hdop <= 2.5 && speed >= 3.0) {
+                        // Strict Indoor Hardening Filter: Displacement >= 15m AND Speed >= 3.5 km/h AND HDOP <= 1.8 AND Sats >= 7
+                        if (dist >= DISPLACEMENT_THRESHOLD_METERS && dist < 500 && sats >= MIN_REQUIRED_SATELLITES && hdop <= MAX_ALLOWED_HDOP && speed >= SPEED_THRESHOLD_KMH) {
                             totalDistanceMeters += dist;
                             pathCoordinates.push([lat, lon]);
                             anchorLat = lat;
@@ -132,7 +133,7 @@ async function fetchHistory() {
             });
 
             polyline.setLatLngs(pathCoordinates);
-            document.getElementById("distanceVal").innerHTML = `${totalDistanceMeters.toFixed(1)} <small>meters</small>`;
+            document.getElementById("distanceVal").innerHTML = `${totalDistanceMeters.toFixed(1)} <small>m</small>`;
 
             if (pathCoordinates.length > 0) {
                 const latestCoord = pathCoordinates[pathCoordinates.length - 1];
@@ -156,32 +157,20 @@ async function fetchLatestTelemetry() {
         }
     } catch (e) {
         console.error("Error fetching latest telemetry:", e);
-        document.getElementById("statusPulse").className = "status-indicator";
-        document.getElementById("systemState").innerText = "DISCONNECTED";
-        document.getElementById("genuinenessStatus").innerText = "HARDWARE OFFLINE";
+        document.getElementById("motionStatusBadge").className = "motion-status parked";
+        document.getElementById("motionStatusBadge").innerText = "OFFLINE";
     }
 }
 
 function updateDashboard(data) {
-    // Check packet freshness for Genuineness Verification
-    if (data.id && data.id !== lastPacketId) {
-        lastPacketId = data.id;
-        flashGenuinenessPulse();
-    }
-
-    // 1. Status & Genuineness Verification Banner
-    document.getElementById("statusPulse").className = "status-indicator online";
-    document.getElementById("systemState").innerText = "HARDWARE LIVE";
-    document.getElementById("lastUpdated").innerText = `Received: ${data.timestamp || new Date().toLocaleTimeString()}`;
-    document.getElementById("deviceId").innerText = data.device_id || "UGV-01";
-    document.getElementById("genuinenessStatus").innerText = `VERIFIED LIVE DATA (#${data.id || 1})`;
-    document.getElementById("genuinenessSub").innerText = `ID: ${data.device_id || "UGV-TRACKER-01"} | Recv: ${data.created_at || 'Just now'}`;
-
-    // 2. Compact Mini Battery Badge
+    // 1. Header Chips
     const bat = data.battery || 4.2;
     document.getElementById("batteryVal").innerText = `${bat.toFixed(1)}V`;
+    
+    const rssi = data.rssi || 0;
+    document.getElementById("rssiVal").innerText = `${rssi} CSQ`;
 
-    // 3. GNSS Satellites & Fix Mode Status Breakdown
+    // 2. GNSS Fix & Satellite Quality Breakdown
     const sats = data.satellites || 0;
     const hdop = data.hdop || 1.0;
     const fixMode = data.fix_mode !== undefined ? data.fix_mode : (data.fix_valid ? 3 : 0);
@@ -189,75 +178,64 @@ function updateDashboard(data) {
 
     document.getElementById("satellitesVal").innerText = sats;
 
+    // Hardened Fix Quality Logic
+    const isQualityFix = (fixMode >= 3 && sats >= MIN_REQUIRED_SATELLITES && hdop <= MAX_ALLOWED_HDOP);
+
     if (fixMode === 4) {
-        fixBadge.className = "fix-badge mode-dgps";
         fixBadge.innerText = "DGPS (Sub-Meter)";
-        document.getElementById("fixStatus").innerText = `Sub-Meter Accuracy (HDOP: ${hdop.toFixed(1)})`;
-    } else if (fixMode === 3 && sats >= 6 && hdop <= 2.5) {
-        fixBadge.className = "fix-badge mode-3d";
-        fixBadge.innerText = "3D GNSS Fix";
-        document.getElementById("fixStatus").innerText = `High Accuracy (HDOP: ${hdop.toFixed(1)})`;
-    } else if (fixMode === 2 || (sats >= 4 && sats < 6)) {
-        fixBadge.className = "fix-badge mode-2d";
+        fixBadge.style.color = "#0284C7";
+    } else if (isQualityFix) {
+        fixBadge.innerText = "3D GNSS (High Acc)";
+        fixBadge.style.color = "#10B981";
+    } else if (sats >= 4 && sats < MIN_REQUIRED_SATELLITES) {
         fixBadge.innerText = "2D Fix (Low Acc)";
-        document.getElementById("fixStatus").innerText = `Low Accuracy / Partial Obstruction (HDOP: ${hdop.toFixed(1)})`;
+        fixBadge.style.color = "#F59E0B";
     } else {
-        fixBadge.className = "fix-badge mode-none";
-        fixBadge.innerText = "Indoor / No Fix";
-        document.getElementById("fixStatus").innerText = "Antenna indoors or Searching Satellites...";
+        fixBadge.innerText = "Indoor Noise / No Fix";
+        fixBadge.style.color = "#EF4444";
     }
 
-    // 4. Position & Coordinates
+    // 3. Location Data
     const lat = data.latitude || 0.0;
     const lon = data.longitude || 0.0;
     const alt = data.altitude || 0.0;
-    const heading = data.heading || 0.0;
     let rawSpeed = data.speed || 0.0;
 
     document.getElementById("latVal").innerText = `${lat.toFixed(6)}°`;
     document.getElementById("lonVal").innerText = `${lon.toFixed(6)}°`;
     document.getElementById("altVal").innerText = `${alt.toFixed(1)} m`;
-    document.getElementById("headingVal").innerText = `${heading.toFixed(1)}°`;
 
-    // 5. LTE Cellular Signal (CSQ)
-    const rssi = data.rssi || 0;
-    document.getElementById("rssiVal").innerText = `${rssi} CSQ`;
-    const signalBars = document.getElementById("signalBars");
-    const signalQualityText = document.getElementById("signalQualityText");
+    // 4. Strict Indoor & Speed Hardening Logic
+    const motionBadge = document.getElementById("motionStatusBadge");
+    
+    // If raw speed < 3.5 km/h OR HDOP > 1.8 OR Sats < 7, force Speed = 0.0 & status = PARKED
+    let displaySpeed = (rawSpeed >= SPEED_THRESHOLD_KMH && isQualityFix) ? rawSpeed : 0.0;
 
-    let activeLevel = 0;
-    if (rssi >= 20) { activeLevel = 4; signalQualityText.innerText = "Excellent LTE Signal"; }
-    else if (rssi >= 15) { activeLevel = 3; signalQualityText.innerText = "Good LTE Signal"; }
-    else if (rssi >= 10) { activeLevel = 2; signalQualityText.innerText = "Fair LTE Signal"; }
-    else if (rssi > 0) { activeLevel = 1; signalQualityText.innerText = "Weak LTE Signal"; }
-    else { activeLevel = 0; signalQualityText.innerText = "No Cellular Signal"; }
+    document.getElementById("speedVal").innerText = displaySpeed.toFixed(1);
 
-    signalBars.className = `signal-bars active-${activeLevel}`;
+    if (displaySpeed >= SPEED_THRESHOLD_KMH) {
+        motionBadge.className = "motion-status moving";
+        motionBadge.innerText = "MOVING";
+    } else {
+        motionBadge.className = "motion-status parked";
+        motionBadge.innerText = "PARKED";
+    }
 
-    // 6. Stationary Deadband Anchor Logic (100% Drift Elimination)
+    // 5. Stationary Deadband Anchor Logic (15m Threshold)
     if (lat !== 0 && lon !== 0 && fixMode >= 2) {
         const currentPos = [lat, lon];
 
         if (anchorLat !== null && anchorLon !== null) {
             const displacement = haversineDistance(anchorLat, anchorLon, lat, lon);
 
-            // Check if displacement is WITHIN 12-meter stationary deadband radius
-            if (displacement < STATIONARY_DEADBAND_METERS || rawSpeed < 3.0 || sats < 6 || hdop > 2.5) {
-                // Vehicle is STATIONARY (or minor GPS jitter)
-                document.getElementById("speedVal").innerText = "0.0";
-                document.getElementById("speedBar").style.width = "0%";
-
-                // Keep marker anchored at stable position
+            // Check if displacement is WITHIN 15-meter stationary deadband radius
+            if (displacement < DISPLACEMENT_THRESHOLD_METERS || !isQualityFix || displaySpeed < SPEED_THRESHOLD_KMH) {
+                // Vehicle is PARKED / STATIONARY (or indoor multipath noise)
                 marker.setLatLng([anchorLat, anchorLon]);
             } else {
-                // Vehicle is ACTUALLY MOVING (> 12m displacement & speed >= 3.0 km/h)
-                document.getElementById("speedVal").innerText = rawSpeed.toFixed(1);
-                const speedPercent = Math.min((rawSpeed / 30) * 100, 100);
-                document.getElementById("speedBar").style.width = `${speedPercent}%`;
-
-                // Accumulate Distance & Update Anchor
+                // Vehicle is ACTUALLY MOVING (> 15m displacement & speed >= 3.5 km/h)
                 totalDistanceMeters += displacement;
-                document.getElementById("distanceVal").innerHTML = `${totalDistanceMeters.toFixed(1)} <small>meters</small>`;
+                document.getElementById("distanceVal").innerHTML = `${totalDistanceMeters.toFixed(1)} <small>m</small>`;
 
                 anchorLat = lat;
                 anchorLon = lon;
@@ -266,12 +244,10 @@ function updateDashboard(data) {
                 marker.setLatLng(currentPos);
             }
         } else {
-            // First valid point anchor (Stationary origin)
+            // Initial anchor
             anchorLat = lat;
             anchorLon = lon;
             marker.setLatLng(currentPos);
-            document.getElementById("speedVal").innerText = "0.0";
-            document.getElementById("speedBar").style.width = "0%";
         }
 
         marker.setPopupContent(`
@@ -283,15 +259,6 @@ function updateDashboard(data) {
             </div>
         `);
     }
-}
-
-function flashGenuinenessPulse() {
-    const banner = document.getElementById("genuinenessBanner");
-    banner.style.transform = "scale(1.02)";
-    banner.style.borderColor = "#10B981";
-    setTimeout(() => {
-        banner.style.transform = "scale(1)";
-    }, 300);
 }
 
 function centerMap() {
@@ -306,10 +273,8 @@ async function clearTrail() {
     totalDistanceMeters = 0;
     anchorLat = null;
     anchorLon = null;
-    lastPacketId = null;
-    document.getElementById("distanceVal").innerHTML = `0.0 <small>meters</small>`;
+    document.getElementById("distanceVal").innerHTML = `0.0 <small>m</small>`;
 
-    // Purge database history on server so refreshed page starts 100% clean
     try {
         await fetch('/api/v1/telemetry/reset', { method: 'POST' });
         console.log("Server database history purged");

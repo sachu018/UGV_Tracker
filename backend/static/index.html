@@ -2,13 +2,13 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>UGV Command Center — Live Verified Telemetry & GPS Tracking</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>UGV FleetTrack — Mobile Live GPS Tracking</title>
     
     <!-- Google Fonts: Outfit & JetBrains Mono -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     
     <!-- Leaflet Map CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
@@ -16,160 +16,108 @@
     <!-- FontAwesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
-    <!-- Dashboard Styles -->
+    <!-- FleetTrack Mobile Dashboard Styles -->
     <link rel="stylesheet" href="/static/style.css">
 </head>
 <body class="light-theme">
-    <div class="app-container">
-        <!-- Sidebar Controls & Metrics -->
-        <aside class="sidebar">
-            <div class="brand">
-                <div class="logo-icon">
-                    <i class="fa-solid fa-crosshairs"></i>
+    <div class="fleet-app">
+        <!-- Floating Top Header Bar (FleetTrack Mobile Header) -->
+        <header class="fleet-header">
+            <div class="header-left">
+                <div class="vehicle-icon">
+                    <i class="fa-solid fa-truck-monster"></i>
                 </div>
-                <div class="brand-text">
-                    <h1>UGV COMMAND CENTER</h1>
-                    <span class="subtitle">Live Verified Hardware Telemetry</span>
-                </div>
-            </div>
-
-            <!-- Hardware Verification & Live Status Card -->
-            <div class="status-card" id="statusCard">
-                <div class="status-indicator online" id="statusPulse"></div>
-                <div class="status-info">
-                    <div class="status-title" id="systemState">HARDWARE CONNECTED</div>
-                    <div class="status-sub" id="lastUpdated">Awaiting first LTE packet...</div>
-                </div>
-                <div class="header-badges">
-                    <span class="device-badge" id="deviceId">UGV-01</span>
-                    <!-- Small Compact Battery Badge -->
-                    <span class="battery-mini-badge" id="batteryMiniBadge">
-                        <i class="fa-solid fa-battery-full"></i> <span id="batteryVal">4.2V</span>
-                    </span>
+                <div class="vehicle-meta">
+                    <h2>UGV-TRACKER-01</h2>
+                    <span class="motion-status parked" id="motionStatusBadge">PARKED</span>
                 </div>
             </div>
-
-            <!-- Data Genuineness Verification Banner -->
-            <div class="genuineness-banner" id="genuinenessBanner">
-                <i class="fa-solid fa-shield-halved"></i>
-                <div class="banner-text">
-                    <strong id="genuinenessStatus">VERIFIED LIVE DATA</strong>
-                    <span id="genuinenessSub">Hardware ID: UGV-TRACKER-01</span>
-                </div>
-            </div>
-
-            <!-- Grid Telemetry Metrics -->
-            <div class="metrics-grid">
-                <!-- Speed Gauge Card -->
-                <div class="metric-card speed-card">
-                    <div class="card-header">
-                        <i class="fa-solid fa-gauge-high"></i>
-                        <span>VEHICLE SPEED</span>
-                    </div>
-                    <div class="speed-value">
-                        <span id="speedVal">0.0</span>
-                        <small>km/h</small>
-                    </div>
-                    <div class="speed-progress-bg">
-                        <div class="speed-progress-bar" id="speedBar" style="width: 0%;"></div>
-                    </div>
-                </div>
-
-                <!-- GNSS Satellites & Fix Mode Card -->
-                <div class="metric-card span-2">
-                    <div class="card-header">
-                        <i class="fa-solid fa-satellite"></i>
-                        <span>GNSS SATELLITE & FIX MODE</span>
-                    </div>
-                    <div class="satellite-row">
-                        <div class="sat-count">
-                            <span class="metric-value" id="satellitesVal">--</span>
-                            <span class="sat-label">Satellites Locked</span>
-                        </div>
-                        <div class="fix-badge-container">
-                            <span class="fix-badge mode-none" id="fixModeBadge">No Fix</span>
-                        </div>
-                    </div>
-                    <div class="metric-sub" id="fixStatus">Checking satellite constellation...</div>
-                </div>
-
-                <!-- Cellular LTE Signal Strength (CSQ) -->
-                <div class="metric-card span-2">
-                    <div class="card-header">
-                        <i class="fa-solid fa-signal"></i>
-                        <span>LTE CELLULAR SIGNAL (CSQ)</span>
-                    </div>
-                    <div class="signal-row">
-                        <div class="signal-info">
-                            <div class="metric-value" id="rssiVal">-- CSQ</div>
-                            <span class="signal-quality-text" id="signalQualityText">Checking cellular tower...</span>
-                        </div>
-                        <div class="signal-bars" id="signalBars">
-                            <span class="bar"></span>
-                            <span class="bar"></span>
-                            <span class="bar"></span>
-                            <span class="bar"></span>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Accurate Distance Traveled -->
-                <div class="metric-card span-2">
-                    <div class="card-header">
-                        <i class="fa-solid fa-route"></i>
-                        <span>ACCURATE TRIP DISTANCE (DRIFT FILTERED)</span>
-                    </div>
-                    <div class="metric-value highlight" id="distanceVal">0.0 <small>meters</small></div>
-                </div>
-            </div>
-
-            <!-- Position Coordinates Breakdown -->
-            <div class="coordinates-card">
-                <div class="coord-row">
-                    <span class="label"><i class="fa-solid fa-location-dot"></i> LATITUDE</span>
-                    <span class="val" id="latVal">0.000000°</span>
-                </div>
-                <div class="coord-row">
-                    <span class="label"><i class="fa-solid fa-location-dot"></i> LONGITUDE</span>
-                    <span class="val" id="lonVal">0.000000°</span>
-                </div>
-                <div class="coord-row">
-                    <span class="label"><i class="fa-solid fa-mountain"></i> ALTITUDE</span>
-                    <span class="val" id="altVal">0.0 m</span>
-                </div>
-                <div class="coord-row">
-                    <span class="label"><i class="fa-solid fa-compass"></i> HEADING</span>
-                    <span class="val" id="headingVal">0.0°</span>
-                </div>
-            </div>
-
-            <div class="actions">
-                <button class="btn btn-primary" id="btnCenterMap">
-                    <i class="fa-solid fa-bullseye"></i> Center Map
-                </button>
-                <button class="btn btn-secondary" id="btnClearTrail">
-                    <i class="fa-solid fa-trash-can"></i> Clear Trail
-                </button>
-            </div>
-        </aside>
-
-        <!-- Main Content: Map Container -->
-        <main class="map-container">
-            <div id="map"></div>
             
-            <!-- Map Overlay Controls -->
-            <div class="map-overlay-top">
-                <div class="chip"><i class="fa-solid fa-satellite-dish"></i> ESP32 + EC200U-CN Active</div>
-                <div class="chip map-selector-chip">
-                    <i class="fa-solid fa-layer-group"></i>
-                    <select id="mapTypeSelect">
-                        <option value="google_roadmap">Google Maps (Roadmap)</option>
-                        <option value="google_hybrid">Google Maps (Satellite Hybrid)</option>
-                        <option value="osm">OpenStreetMap</option>
-                    </select>
+            <div class="header-right">
+                <div class="mini-chip battery-chip" id="batteryChip">
+                    <i class="fa-solid fa-battery-full"></i> <span id="batteryVal">4.2V</span>
                 </div>
+                <div class="mini-chip signal-chip" id="signalChip">
+                    <i class="fa-solid fa-signal"></i> <span id="rssiVal">-- CSQ</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Fullscreen Map -->
+        <main class="fleet-map-container">
+            <div id="map"></div>
+
+            <!-- Floating Map Selector Top Overlay -->
+            <div class="map-selector-overlay">
+                <i class="fa-solid fa-layer-group"></i>
+                <select id="mapTypeSelect">
+                    <option value="google_roadmap">Google Maps (Roadmap)</option>
+                    <option value="google_hybrid">Google Maps (Satellite Hybrid)</option>
+                    <option value="osm">OpenStreetMap</option>
+                </select>
             </div>
         </main>
+
+        <!-- FleetTrack Bottom Sliding Sheet (Mobile Bottom Panel) -->
+        <section class="fleet-bottom-sheet">
+            <div class="sheet-drag-handle"></div>
+
+            <!-- Primary Speed & Distance Banner -->
+            <div class="speed-distance-row">
+                <div class="speed-box">
+                    <span class="speed-num" id="speedVal">0.0</span>
+                    <span class="speed-unit">km/h</span>
+                </div>
+                <div class="distance-box">
+                    <span class="dist-label">TRIP DISTANCE</span>
+                    <span class="dist-num" id="distanceVal">0.0 <small>m</small></span>
+                </div>
+            </div>
+
+            <!-- Fix Quality & Satellite Bar -->
+            <div class="status-strip">
+                <div class="strip-item">
+                    <i class="fa-solid fa-satellite"></i>
+                    <div>
+                        <small>SATELLITES</small>
+                        <strong id="satellitesVal">--</strong>
+                    </div>
+                </div>
+                <div class="strip-item">
+                    <i class="fa-solid fa-shield-halved"></i>
+                    <div>
+                        <small>GPS PRECISION</small>
+                        <strong id="fixModeBadge">Checking Fix...</strong>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Coordinates & Location Info -->
+            <div class="location-card">
+                <div class="loc-item">
+                    <span class="lbl">Latitude:</span>
+                    <span class="val" id="latVal">0.000000°</span>
+                </div>
+                <div class="loc-item">
+                    <span class="lbl">Longitude:</span>
+                    <span class="val" id="lonVal">0.000000°</span>
+                </div>
+                <div class="loc-item">
+                    <span class="lbl">Altitude:</span>
+                    <span class="val" id="altVal">0.0 m</span>
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="sheet-actions">
+                <button class="btn btn-primary" id="btnCenterMap">
+                    <i class="fa-solid fa-bullseye"></i> Center Vehicle
+                </button>
+                <button class="btn btn-secondary" id="btnClearTrail">
+                    <i class="fa-solid fa-trash-can"></i> Clear Route
+                </button>
+            </div>
+        </section>
     </div>
 
     <!-- Leaflet JS -->
