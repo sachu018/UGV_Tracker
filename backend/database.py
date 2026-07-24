@@ -89,5 +89,9 @@ def clear_telemetry():
     conn = sqlite3.connect(DB_FILE)
     cursor = conn.cursor()
     cursor.execute("DELETE FROM telemetry")
+    try:
+        cursor.execute("DELETE FROM sqlite_sequence WHERE name='telemetry'")
+    except Exception:
+        pass
     conn.commit()
     conn.close()

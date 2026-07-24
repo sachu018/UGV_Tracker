@@ -55,17 +55,22 @@ async def receive_get_telemetry(
     field8: int = 3,     # Fix Mode (0=No Fix, 2=2D, 3=3D, 4=DGPS)
     device_id: str = "UGV-TRACKER-01"
 ):
+    # Server-Side Stationary Drift Noise Filter
+    clean_speed = field3
+    if field3 < 2.5 or field4 < 5 or field8 < 2:
+        clean_speed = 0.0
+
     data = {
         "device_id": device_id,
         "latitude": field1,
         "longitude": field2,
-        "speed": field3,
+        "speed": clean_speed,
         "satellites": field4,
         "altitude": field5,
         "rssi": field6,
         "battery": field7,
         "fix_mode": field8,
-        "fix_valid": True if field1 != 0 and field2 != 0 else False
+        "fix_valid": True if field1 != 0 and field2 != 0 and field8 >= 2 else False
     }
     database.save_telemetry(data)
     return {"status": "success", "message": "Telemetry updated"}

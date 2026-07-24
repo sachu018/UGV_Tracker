@@ -127,7 +127,6 @@ async function fetchHistory() {
                     } else {
                         anchorLat = lat;
                         anchorLon = lon;
-                        pathCoordinates.push([lat, lon]);
                     }
                 }
             });
@@ -267,11 +266,9 @@ function updateDashboard(data) {
                 marker.setLatLng(currentPos);
             }
         } else {
-            // First valid point anchor
+            // First valid point anchor (Stationary origin)
             anchorLat = lat;
             anchorLon = lon;
-            pathCoordinates.push(currentPos);
-            polyline.setLatLngs(pathCoordinates);
             marker.setLatLng(currentPos);
             document.getElementById("speedVal").innerText = "0.0";
             document.getElementById("speedBar").style.width = "0%";
@@ -309,11 +306,13 @@ async function clearTrail() {
     totalDistanceMeters = 0;
     anchorLat = null;
     anchorLon = null;
+    lastPacketId = null;
     document.getElementById("distanceVal").innerHTML = `0.0 <small>meters</small>`;
 
-    // Purge database history on server
+    // Purge database history on server so refreshed page starts 100% clean
     try {
         await fetch('/api/v1/telemetry/reset', { method: 'POST' });
+        console.log("Server database history purged");
     } catch (e) {
         console.error("Error resetting database history:", e);
     }
