@@ -3,11 +3,17 @@
 let map;
 let marker;
 let polyline;
+let currentTileLayer = null;
 let pathCoordinates = [];
 let totalDistanceMeters = 0.0;
 let lastLat = null;
 let lastLon = null;
-let demoInterval = null;
+
+const mapLayers = {
+    google_roadmap: 'https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',
+    google_hybrid: 'https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}',
+    osm: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'
+};
 
 // Initialize Leaflet Map on Load
 document.addEventListener("DOMContentLoaded", () => {
@@ -18,8 +24,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
     document.getElementById("btnCenterMap").addEventListener("click", centerMap);
     document.getElementById("btnClearTrail").addEventListener("click", clearTrail);
-    document.getElementById("btnSimulate").addEventListener("click", toggleDemoSimulation);
     document.getElementById("btnToggleTheme").addEventListener("click", toggleTheme);
+    document.getElementById("mapTypeSelect").addEventListener("change", changeMapLayer);
 });
 
 function initTheme() {
@@ -57,19 +63,19 @@ function initMap() {
     // Add Zoom Control to Bottom Right
     L.control.zoom({ position: 'bottomright' }).addTo(map);
 
-    // OpenStreetMap High-Res Standard Clear Map Layer
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-        maxZoom: 19
+    // Set Google Maps (Roadmap) by default
+    currentTileLayer = L.tileLayer(mapLayers.google_roadmap, {
+        attribution: '&copy; Google Maps',
+        maxZoom: 20
     }).addTo(map);
 
-    // Custom Glowing SVG Icon for UGV
+    // Custom UGV Vehicle Marker Icon
     const ugvIcon = L.divIcon({
         className: 'ugv-custom-marker',
         html: `
             <div style="
-                width: 32px;
-                height: 32px;
+                width: 34px;
+                height: 34px;
                 background: linear-gradient(135deg, #0284C7, #2563EB);
                 border: 3px solid #FFFFFF;
                 border-radius: 50%;
@@ -78,13 +84,13 @@ function initMap() {
                 align-items: center;
                 justify-content: center;
                 color: #FFF;
-                font-size: 14px;
+                font-size: 15px;
             ">
                 <i class="fa-solid fa-car"></i>
             </div>
         `,
-        iconSize: [32, 32],
-        iconAnchor: [16, 16]
+        iconSize: [34, 34],
+        iconAnchor: [17, 17]
     });
 
     marker = L.marker([initialLat, initialLon], { icon: ugvIcon }).addTo(map);
@@ -98,6 +104,17 @@ function initMap() {
         lineCap: 'round',
         lineJoin: 'round'
     }).addTo(map);
+}
+
+function changeMapLayer(event) {
+    const selectedKey = event.target.value;
+    if (mapLayers[selectedKey] && currentTileLayer) {
+        map.removeLayer(currentTileLayer);
+        currentTileLayer = L.tileLayer(mapLayers[selectedKey], {
+            attribution: selectedKey.startsWith('google') ? '&copy; Google Maps' : '&copy; OpenStreetMap',
+            maxZoom: 20
+        }).addTo(map);
+    }
 }
 
 // Fetch historical path on startup
@@ -242,35 +259,6 @@ function clearTrail() {
     polyline.setLatLngs([]);
     totalDistanceMeters = 0;
     document.getElementById("distanceVal").innerHTML = `0.0 <small>meters</small>`;
-}
-
-// Toggle Live Demo Simulation Mode for Testing Movement
-function toggleDemoSimulation() {
-    const btn = document.getElementById("btnSimulate");
-    if (demoInterval) {
-        clearInterval(demoInterval);
-        demoInterval = null;
-        btn.innerHTML = '<i class="fa-solid fa-play"></i> Simulate Demo Trip (Test Movement)';
-        btn.classList.remove("btn-danger");
-        btn.classList.add("btn-demo");
-    } else {
-        let simLat = lastLat || 10.8087;
-        let simLon = lastLon || 76.7402;
-        let step = 0;
-
-        btn.innerHTML = '<i class="fa-solid fa-square"></i> Stop Simulation';
-        btn.classList.remove("btn-demo");
-        btn.classList.add("btn-danger");
-
-        demoInterval = setInterval(async () => {
-            step++;
-            simLat += (Math.sin(step * 0.3) * 0.00015);
-            simLon += (Math.cos(step * 0.3) * 0.00015);
-            const simSpeed = (Math.random() * 8 + 4);
-
-            await fetch(`/api/v1/telemetry/update?field1=${simLat}&field2=${simLon}&field3=${simSpeed}&field4=14&field5=28.5&field6=22&field7=4.15`);
-        }, 1500);
-    }
 }
 
 // Calculate distance between two GPS coordinates in meters

@@ -20,8 +20,8 @@
 // Cellular Network Configuration
 #define CELLULAR_APN        "airtelgprs.com" // Replace with your SIM card APN
 
-// Custom FastAPI Backend Telemetry Configuration
-#define SERVER_URL          "http://10.32.5.165:8000/api/v1/telemetry/update"
+// Custom FastAPI Backend Telemetry Configuration (Public Cellular URL)
+#define SERVER_URL          "https://ugv-tracker-server.loca.lt/api/v1/telemetry/update"
 #define THINGSPEAK_URL      "https://api.thingspeak.com/update"
 #define THINGSPEAK_API_KEY  "URP875F2003RSKLM"
 #define DEVICE_ID           "UGV-TRACKER-01"

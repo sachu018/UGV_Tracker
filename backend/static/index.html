@@ -73,7 +73,7 @@
                     <div class="metric-sub" id="fixStatus">Awaiting 3D Fix...</div>
                 </div>
 
-                <!-- Signal RSSI Card (CSQ Explanation) -->
+                <!-- Signal RSSI Card -->
                 <div class="metric-card" title="CSQ = Cellular Signal Quality (0-31 range)">
                     <div class="card-header">
                         <i class="fa-solid fa-signal"></i>
@@ -138,20 +138,23 @@
                     <i class="fa-solid fa-trash-can"></i> Clear Trail
                 </button>
             </div>
-            
-            <button class="btn btn-demo" id="btnSimulate" style="margin-top: 10px;">
-                <i class="fa-solid fa-play"></i> Simulate Demo Trip (Test Movement)
-            </button>
         </aside>
 
-        <!-- Main Content: Clear Map -->
+        <!-- Main Content: Map Container -->
         <main class="map-container">
             <div id="map"></div>
             
             <!-- Map Overlay Controls -->
             <div class="map-overlay-top">
                 <div class="chip"><i class="fa-solid fa-satellite-dish"></i> ESP32 + EC200U-CN Active</div>
-                <div class="chip"><i class="fa-solid fa-map"></i> OpenStreetMap High-Res Vector Map</div>
+                <div class="chip map-selector-chip">
+                    <i class="fa-solid fa-layer-group"></i>
+                    <select id="mapTypeSelect">
+                        <option value="google_roadmap">Google Maps (Roadmap)</option>
+                        <option value="google_hybrid">Google Maps (Satellite Hybrid)</option>
+                        <option value="osm">OpenStreetMap</option>
+                    </select>
+                </div>
             </div>
         </main>
     </div>

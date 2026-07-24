@@ -114,12 +114,25 @@ void Tracker::handleState() {
             tData.state = _state;
 
             int httpCode = 0;
-            bool success = _httpClient.sendTelemetry(SERVER_URL, tData, httpCode);
+            String respBody;
+            
+            String url = String(SERVER_URL) +
+                         "?field1=" + String(tData.gps.latitude, 6) +
+                         "&field2=" + String(tData.gps.longitude, 6) +
+                         "&field3=" + String(tData.gps.speed, 2) +
+                         "&field4=" + String(tData.gps.satellites) +
+                         "&field5=" + String(tData.gps.altitude, 1) +
+                         "&field6=" + String(tData.signalRssi) +
+                         "&field7=" + String(tData.batteryVoltage, 2) +
+                         "&device_id=" + tData.deviceId;
+
+            LOG_INFO("Uploading Telemetry to FastAPI Backend...");
+            bool success = _modem.getHTTP(url, httpCode, respBody);
             
             if (success) {
-                LOG_INFO("Custom Backend Telemetry Upload SUCCESSFUL!");
+                LOG_INFO("FastAPI Telemetry Upload SUCCESSFUL!");
             } else {
-                LOG_ERROR("Custom Backend Upload FAILED (Code: " + String(httpCode) + ")");
+                LOG_ERROR("FastAPI Upload FAILED (Code: " + String(httpCode) + ")");
             }
 
             // Return to tracking

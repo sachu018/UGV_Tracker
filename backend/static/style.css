@@ -443,3 +443,19 @@ body {
 .chip i {
     color: var(--primary);
 }
+
+.map-selector-chip select {
+    background: transparent;
+    border: none;
+    color: var(--text-main);
+    font-family: var(--font-sans);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    outline: none;
+}
+
+.map-selector-chip select option {
+    background: var(--panel-bg);
+    color: var(--text-main);
+}
