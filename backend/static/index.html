@@ -19,7 +19,7 @@
     <!-- Dashboard Styles -->
     <link rel="stylesheet" href="/static/style.css">
 </head>
-<body>
+<body class="light-theme">
     <div class="app-container">
         <!-- Sidebar Controls & Metrics -->
         <aside class="sidebar">
@@ -31,6 +31,9 @@
                     <h1>UGV TRACKER</h1>
                     <span class="subtitle">Autonomous Ground Vehicle</span>
                 </div>
+                <button class="theme-toggle-btn" id="btnToggleTheme" title="Toggle Light/Dark Theme">
+                    <i class="fa-solid fa-moon"></i>
+                </button>
             </div>
 
             <!-- Status Indicator Card -->
@@ -67,14 +70,14 @@
                         <span>GNSS SATELLITES</span>
                     </div>
                     <div class="metric-value" id="satellitesVal">--</div>
-                    <div class="metric-sub" id="fixStatus">Checking 3D Fix...</div>
+                    <div class="metric-sub" id="fixStatus">Awaiting 3D Fix...</div>
                 </div>
 
-                <!-- Signal RSSI Card -->
-                <div class="metric-card">
+                <!-- Signal RSSI Card (CSQ Explanation) -->
+                <div class="metric-card" title="CSQ = Cellular Signal Quality (0-31 range)">
                     <div class="card-header">
                         <i class="fa-solid fa-signal"></i>
-                        <span>LTE SIGNAL</span>
+                        <span>LTE SIGNAL (CSQ)</span>
                     </div>
                     <div class="metric-value" id="rssiVal">-- CSQ</div>
                     <div class="signal-bars" id="signalBars">
@@ -103,7 +106,7 @@
                         <i class="fa-solid fa-route"></i>
                         <span>TOTAL DISTANCE MOVED</span>
                     </div>
-                    <div class="metric-value highlight" id="distanceVal">0.00 <small>meters</small></div>
+                    <div class="metric-value highlight" id="distanceVal">0.0 <small>meters</small></div>
                 </div>
             </div>
 
@@ -135,16 +138,20 @@
                     <i class="fa-solid fa-trash-can"></i> Clear Trail
                 </button>
             </div>
+            
+            <button class="btn btn-demo" id="btnSimulate" style="margin-top: 10px;">
+                <i class="fa-solid fa-play"></i> Simulate Demo Trip (Test Movement)
+            </button>
         </aside>
 
-        <!-- Main Content: Fullscreen Map -->
+        <!-- Main Content: Clear Map -->
         <main class="map-container">
             <div id="map"></div>
             
             <!-- Map Overlay Controls -->
             <div class="map-overlay-top">
                 <div class="chip"><i class="fa-solid fa-satellite-dish"></i> ESP32 + EC200U-CN Active</div>
-                <div class="chip"><i class="fa-solid fa-layer-group"></i> Dark Vector Map</div>
+                <div class="chip"><i class="fa-solid fa-map"></i> OpenStreetMap High-Res Vector Map</div>
             </div>
         </main>
     </div>

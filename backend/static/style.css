@@ -1,21 +1,40 @@
+/* UGV Dashboard — Dual Light / Dark Theme System */
+
 :root {
-    --bg-dark: #090D16;
-    --panel-bg: rgba(18, 26, 43, 0.75);
-    --panel-border: rgba(255, 255, 255, 0.08);
-    --card-bg: rgba(27, 38, 61, 0.6);
-    --card-hover: rgba(36, 50, 79, 0.8);
+    /* Light Theme (Default) */
+    --bg-main: #F1F5F9;
+    --panel-bg: #FFFFFF;
+    --panel-border: #E2E8F0;
+    --card-bg: #F8FAFC;
+    --card-hover: #F1F5F9;
+    
+    --primary: #0284C7;
+    --primary-glow: rgba(2, 132, 199, 0.25);
+    --secondary: #2563EB;
+    --accent: #10B981;
+    --danger: #EF4444;
+    --warning: #F59E0B;
+
+    --text-main: #0F172A;
+    --text-muted: #64748B;
+    --font-sans: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
+    --font-mono: 'JetBrains Mono', monospace;
+}
+
+body.dark-theme {
+    --bg-main: #090D16;
+    --panel-bg: #111827;
+    --panel-border: rgba(255, 255, 255, 0.1);
+    --card-bg: #1F2937;
+    --card-hover: #374151;
     
     --primary: #00F2FE;
     --primary-glow: rgba(0, 242, 254, 0.35);
     --secondary: #4FACFE;
-    --accent: #38EF7D;
-    --danger: #FF0844;
-    --warning: #F6D365;
+    --accent: #10B981;
 
-    --text-main: #F3F4F6;
+    --text-main: #F9FAFB;
     --text-muted: #9CA3AF;
-    --font-sans: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
-    --font-mono: 'JetBrains Mono', monospace;
 }
 
 * {
@@ -26,11 +45,12 @@
 
 body {
     font-family: var(--font-sans);
-    background-color: var(--bg-dark);
+    background-color: var(--bg-main);
     color: var(--text-main);
     overflow: hidden;
     height: 100vh;
     width: 100vw;
+    transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 .app-container {
@@ -43,63 +63,80 @@ body {
 .sidebar {
     width: 420px;
     background: var(--panel-bg);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
     border-right: 1px solid var(--panel-border);
     display: flex;
     flex-direction: column;
     padding: 24px;
     gap: 20px;
     z-index: 1000;
-    box-shadow: 10px 0 30px rgba(0, 0, 0, 0.5);
+    box-shadow: 4px 0 20px rgba(0, 0, 0, 0.05);
     overflow-y: auto;
+    transition: background 0.3s ease;
 }
 
 .brand {
     display: flex;
     align-items: center;
-    gap: 16px;
+    gap: 14px;
 }
 
 .logo-icon {
-    width: 48px;
-    height: 48px;
-    border-radius: 14px;
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
     background: linear-gradient(135deg, var(--primary), var(--secondary));
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 22px;
-    color: #000;
-    box-shadow: 0 0 20px var(--primary-glow);
+    font-size: 20px;
+    color: #FFF;
+    box-shadow: 0 4px 14px var(--primary-glow);
 }
 
 .brand-text h1 {
     font-size: 20px;
     font-weight: 800;
-    letter-spacing: 1px;
-    background: linear-gradient(90deg, #FFFFFF, var(--primary));
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
+    letter-spacing: 0.5px;
+    color: var(--text-main);
 }
 
 .brand-text .subtitle {
     font-size: 11px;
     color: var(--text-muted);
-    letter-spacing: 1.5px;
+    letter-spacing: 1.2px;
     text-transform: uppercase;
+}
+
+.theme-toggle-btn {
+    margin-left: auto;
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+    border: 1px solid var(--panel-border);
+    background: var(--card-bg);
+    color: var(--text-main);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    transition: all 0.2s ease;
+}
+
+.theme-toggle-btn:hover {
+    background: var(--card-hover);
+    color: var(--primary);
 }
 
 /* Status Card */
 .status-card {
     background: var(--card-bg);
     border: 1px solid var(--panel-border);
-    border-radius: 16px;
-    padding: 16px 20px;
+    border-radius: 14px;
+    padding: 14px 18px;
     display: flex;
     align-items: center;
     gap: 14px;
-    position: relative;
 }
 
 .status-indicator {
@@ -111,20 +148,19 @@ body {
 
 .status-indicator.online {
     background-color: var(--accent);
-    box-shadow: 0 0 12px var(--accent);
+    box-shadow: 0 0 10px var(--accent);
     animation: pulse 2s infinite;
 }
 
 @keyframes pulse {
-    0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(56, 239, 125, 0.7); }
-    70% { transform: scale(1); box-shadow: 0 0 0 10px rgba(56, 239, 125, 0); }
-    100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(56, 239, 125, 0); }
+    0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+    70% { transform: scale(1); box-shadow: 0 0 0 8px rgba(16, 185, 129, 0); }
+    100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
 }
 
 .status-title {
     font-size: 13px;
     font-weight: 700;
-    letter-spacing: 0.5px;
 }
 
 .status-sub {
@@ -134,9 +170,9 @@ body {
 
 .device-badge {
     margin-left: auto;
-    background: rgba(0, 242, 254, 0.1);
+    background: rgba(2, 132, 199, 0.1);
     color: var(--primary);
-    border: 1px solid rgba(0, 242, 254, 0.3);
+    border: 1px solid rgba(2, 132, 199, 0.3);
     padding: 4px 10px;
     border-radius: 20px;
     font-size: 11px;
@@ -148,23 +184,23 @@ body {
 .metrics-grid {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
-    gap: 14px;
+    gap: 12px;
 }
 
 .metric-card {
     background: var(--card-bg);
     border: 1px solid var(--panel-border);
-    border-radius: 14px;
-    padding: 16px;
+    border-radius: 12px;
+    padding: 14px;
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 6px;
     transition: all 0.2s ease;
 }
 
 .metric-card:hover {
     background: var(--card-hover);
-    border-color: rgba(0, 242, 254, 0.2);
+    border-color: var(--primary);
 }
 
 .span-2 {
@@ -176,7 +212,7 @@ body {
     align-items: center;
     gap: 8px;
     font-size: 11px;
-    font-weight: 600;
+    font-weight: 700;
     color: var(--text-muted);
     letter-spacing: 0.5px;
 }
@@ -187,12 +223,12 @@ body {
 
 .metric-value {
     font-family: var(--font-mono);
-    font-size: 22px;
+    font-size: 20px;
     font-weight: 700;
 }
 
 .metric-value.highlight {
-    font-size: 26px;
+    font-size: 24px;
     color: var(--primary);
 }
 
@@ -204,13 +240,13 @@ body {
 /* Speedometer Card */
 .speed-card {
     grid-column: span 2;
-    background: linear-gradient(135deg, rgba(0, 242, 254, 0.05), rgba(27, 38, 61, 0.6));
-    border: 1px solid rgba(0, 242, 254, 0.2);
+    background: var(--card-bg);
+    border: 1px solid var(--panel-border);
 }
 
 .speed-value {
     font-family: var(--font-mono);
-    font-size: 42px;
+    font-size: 38px;
     font-weight: 800;
     color: var(--primary);
     display: flex;
@@ -219,13 +255,13 @@ body {
 }
 
 .speed-value small {
-    font-size: 16px;
+    font-size: 15px;
     color: var(--text-muted);
 }
 
 .speed-progress-bg {
     height: 8px;
-    background: rgba(255, 255, 255, 0.08);
+    background: var(--panel-border);
     border-radius: 4px;
     overflow: hidden;
 }
@@ -240,7 +276,7 @@ body {
 /* Battery Bar */
 .battery-bar-bg {
     height: 6px;
-    background: rgba(255, 255, 255, 0.08);
+    background: var(--panel-border);
     border-radius: 3px;
     overflow: hidden;
 }
@@ -262,7 +298,7 @@ body {
 
 .signal-bars .bar {
     width: 6px;
-    background: rgba(255, 255, 255, 0.2);
+    background: var(--panel-border);
     border-radius: 2px;
 }
 
@@ -276,18 +312,17 @@ body {
 .signal-bars.active-3 .bar:nth-child(-n+3),
 .signal-bars.active-4 .bar:nth-child(-n+4) {
     background: var(--primary);
-    box-shadow: 0 0 6px var(--primary-glow);
 }
 
 /* Coordinates Breakdown */
 .coordinates-card {
     background: var(--card-bg);
     border: 1px solid var(--panel-border);
-    border-radius: 14px;
-    padding: 16px;
+    border-radius: 12px;
+    padding: 14px;
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 8px;
 }
 
 .coord-row {
@@ -300,6 +335,7 @@ body {
 .coord-row .label {
     color: var(--text-muted);
     font-size: 11px;
+    font-weight: 600;
     display: flex;
     align-items: center;
     gap: 6px;
@@ -315,7 +351,7 @@ body {
 .actions {
     display: flex;
     gap: 10px;
-    margin-top: auto;
+    margin-top: 5px;
 }
 
 .btn {
@@ -334,25 +370,38 @@ body {
 }
 
 .btn-primary {
-    background: linear-gradient(135deg, var(--primary), var(--secondary));
-    color: #000;
+    background: var(--primary);
+    color: #FFF;
     font-weight: 700;
-    box-shadow: 0 0 15px var(--primary-glow);
+    box-shadow: 0 4px 14px var(--primary-glow);
 }
 
 .btn-primary:hover {
     transform: translateY(-2px);
-    box-shadow: 0 0 25px var(--primary-glow);
+    box-shadow: 0 6px 20px var(--primary-glow);
 }
 
 .btn-secondary {
-    background: rgba(255, 255, 255, 0.05);
+    background: var(--card-bg);
     color: var(--text-main);
     border: 1px solid var(--panel-border);
 }
 
 .btn-secondary:hover {
-    background: rgba(255, 255, 255, 0.1);
+    background: var(--card-hover);
+}
+
+.btn-demo {
+    background: linear-gradient(135deg, #8B5CF6, #6D28D9);
+    color: #FFF;
+    font-weight: 700;
+    border: none;
+    box-shadow: 0 4px 14px rgba(139, 92, 246, 0.3);
+}
+
+.btn-demo:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(139, 92, 246, 0.4);
 }
 
 /* Map Container */
@@ -365,7 +414,7 @@ body {
 #map {
     width: 100%;
     height: 100%;
-    background-color: #090D16;
+    background-color: var(--bg-main);
 }
 
 .map-overlay-top {
@@ -378,8 +427,7 @@ body {
 }
 
 .chip {
-    background: rgba(18, 26, 43, 0.85);
-    backdrop-filter: blur(12px);
+    background: var(--panel-bg);
     border: 1px solid var(--panel-border);
     padding: 8px 16px;
     border-radius: 30px;
@@ -389,22 +437,9 @@ body {
     align-items: center;
     gap: 8px;
     color: var(--text-main);
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
 }
 
 .chip i {
     color: var(--primary);
-}
-
-/* Leaflet Dark Customization */
-.leaflet-popup-content-wrapper {
-    background: rgba(18, 26, 43, 0.95);
-    backdrop-filter: blur(10px);
-    color: #FFF;
-    border: 1px solid var(--panel-border);
-    border-radius: 12px;
-}
-
-.leaflet-popup-tip {
-    background: rgba(18, 26, 43, 0.95);
 }

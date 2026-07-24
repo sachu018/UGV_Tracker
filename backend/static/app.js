@@ -1,4 +1,4 @@
-// UGV Command Center — Dashboard JavaScript
+// UGV Command Center — Dashboard Logic
 
 let map;
 let marker;
@@ -7,16 +7,43 @@ let pathCoordinates = [];
 let totalDistanceMeters = 0.0;
 let lastLat = null;
 let lastLon = null;
+let demoInterval = null;
 
 // Initialize Leaflet Map on Load
 document.addEventListener("DOMContentLoaded", () => {
     initMap();
+    initTheme();
     fetchHistory();
     setInterval(fetchLatestTelemetry, 2000);
 
     document.getElementById("btnCenterMap").addEventListener("click", centerMap);
     document.getElementById("btnClearTrail").addEventListener("click", clearTrail);
+    document.getElementById("btnSimulate").addEventListener("click", toggleDemoSimulation);
+    document.getElementById("btnToggleTheme").addEventListener("click", toggleTheme);
 });
+
+function initTheme() {
+    const savedTheme = localStorage.getItem("ugv_theme") || "light";
+    if (savedTheme === "dark") {
+        document.body.classList.add("dark-theme");
+        document.getElementById("btnToggleTheme").innerHTML = '<i class="fa-solid fa-sun"></i>';
+    } else {
+        document.body.classList.remove("dark-theme");
+        document.getElementById("btnToggleTheme").innerHTML = '<i class="fa-solid fa-moon"></i>';
+    }
+}
+
+function toggleTheme() {
+    if (document.body.classList.contains("dark-theme")) {
+        document.body.classList.remove("dark-theme");
+        localStorage.setItem("ugv_theme", "light");
+        document.getElementById("btnToggleTheme").innerHTML = '<i class="fa-solid fa-moon"></i>';
+    } else {
+        document.body.classList.add("dark-theme");
+        localStorage.setItem("ugv_theme", "dark");
+        document.getElementById("btnToggleTheme").innerHTML = '<i class="fa-solid fa-sun"></i>';
+    }
+}
 
 function initMap() {
     // Default location: Kerala, India (10.8087, 76.7402)
@@ -25,16 +52,15 @@ function initMap() {
 
     map = L.map('map', {
         zoomControl: false
-    }).setView([initialLat, initialLon], 16);
+    }).setView([initialLat, initialLon], 17);
 
     // Add Zoom Control to Bottom Right
     L.control.zoom({ position: 'bottomright' }).addTo(map);
 
-    // CartoDB Dark Matter Tile Layer
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-        attribution: '&copy; OpenStreetMap &copy; CARTO',
-        subdomains: 'abcd',
-        maxZoom: 20
+    // OpenStreetMap High-Res Standard Clear Map Layer
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+        maxZoom: 19
     }).addTo(map);
 
     // Custom Glowing SVG Icon for UGV
@@ -42,33 +68,33 @@ function initMap() {
         className: 'ugv-custom-marker',
         html: `
             <div style="
-                width: 28px;
-                height: 28px;
-                background: linear-gradient(135deg, #00F2FE, #4FACFE);
+                width: 32px;
+                height: 32px;
+                background: linear-gradient(135deg, #0284C7, #2563EB);
                 border: 3px solid #FFFFFF;
                 border-radius: 50%;
-                box-shadow: 0 0 20px #00F2FE, 0 0 40px #00F2FE;
+                box-shadow: 0 4px 14px rgba(2, 132, 199, 0.4);
                 display: flex;
                 align-items: center;
                 justify-content: center;
-                color: #000;
-                font-size: 12px;
+                color: #FFF;
+                font-size: 14px;
             ">
                 <i class="fa-solid fa-car"></i>
             </div>
         `,
-        iconSize: [28, 28],
-        iconAnchor: [14, 14]
+        iconSize: [32, 32],
+        iconAnchor: [16, 16]
     });
 
     marker = L.marker([initialLat, initialLon], { icon: ugvIcon }).addTo(map);
-    marker.bindPopup("<b>UGV-TRACKER-01</b><br>Initializing...");
+    marker.bindPopup("<b>UGV-TRACKER-01</b><br>Awaiting Telemetry...");
 
-    // Neon Polyline Trail
+    // Bright Blue Polyline Trail
     polyline = L.polyline([], {
-        color: '#00F2FE',
-        weight: 4,
-        opacity: 0.8,
+        color: '#0284C7',
+        weight: 5,
+        opacity: 0.85,
         lineCap: 'round',
         lineJoin: 'round'
     }).addTo(map);
@@ -146,7 +172,7 @@ function updateDashboard(data) {
     document.getElementById("satellitesVal").innerText = sats;
     document.getElementById("fixStatus").innerText = data.fix_valid ? "3D FIX OK" : "Searching Satellites...";
 
-    // 4. RSSI
+    // 4. RSSI (CSQ)
     const rssi = data.rssi || 0;
     document.getElementById("rssiVal").innerText = `${rssi} CSQ`;
     const signalBars = document.getElementById("signalBars");
@@ -216,6 +242,35 @@ function clearTrail() {
     polyline.setLatLngs([]);
     totalDistanceMeters = 0;
     document.getElementById("distanceVal").innerHTML = `0.0 <small>meters</small>`;
+}
+
+// Toggle Live Demo Simulation Mode for Testing Movement
+function toggleDemoSimulation() {
+    const btn = document.getElementById("btnSimulate");
+    if (demoInterval) {
+        clearInterval(demoInterval);
+        demoInterval = null;
+        btn.innerHTML = '<i class="fa-solid fa-play"></i> Simulate Demo Trip (Test Movement)';
+        btn.classList.remove("btn-danger");
+        btn.classList.add("btn-demo");
+    } else {
+        let simLat = lastLat || 10.8087;
+        let simLon = lastLon || 76.7402;
+        let step = 0;
+
+        btn.innerHTML = '<i class="fa-solid fa-square"></i> Stop Simulation';
+        btn.classList.remove("btn-demo");
+        btn.classList.add("btn-danger");
+
+        demoInterval = setInterval(async () => {
+            step++;
+            simLat += (Math.sin(step * 0.3) * 0.00015);
+            simLon += (Math.cos(step * 0.3) * 0.00015);
+            const simSpeed = (Math.random() * 8 + 4);
+
+            await fetch(`/api/v1/telemetry/update?field1=${simLat}&field2=${simLon}&field3=${simSpeed}&field4=14&field5=28.5&field6=22&field7=4.15`);
+        }, 1500);
+    }
 }
 
 // Calculate distance between two GPS coordinates in meters
