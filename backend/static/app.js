@@ -1,4 +1,4 @@
-// UGV Command Center — Verified Telemetry & Anti-Drift Filtering Logic
+// UGV Command Center — Verified Telemetry & Stationary Deadband Filtering
 
 let map;
 let marker;
@@ -6,8 +6,12 @@ let polyline;
 let currentTileLayer = null;
 let pathCoordinates = [];
 let totalDistanceMeters = 0.0;
-let lastLat = null;
-let lastLon = null;
+
+// Stationary Deadband Anchoring (Eliminates stationary GPS drift spiderweb)
+let anchorLat = null;
+let anchorLon = null;
+const STATIONARY_DEADBAND_METERS = 12.0;
+
 let lastPacketId = null;
 
 const mapLayers = {
@@ -19,38 +23,13 @@ const mapLayers = {
 // Initialize Leaflet Map on Load
 document.addEventListener("DOMContentLoaded", () => {
     initMap();
-    initTheme();
     fetchHistory();
     setInterval(fetchLatestTelemetry, 2000);
 
     document.getElementById("btnCenterMap").addEventListener("click", centerMap);
     document.getElementById("btnClearTrail").addEventListener("click", clearTrail);
-    document.getElementById("btnToggleTheme").addEventListener("click", toggleTheme);
     document.getElementById("mapTypeSelect").addEventListener("change", changeMapLayer);
 });
-
-function initTheme() {
-    const savedTheme = localStorage.getItem("ugv_theme") || "light";
-    if (savedTheme === "dark") {
-        document.body.classList.add("dark-theme");
-        document.getElementById("btnToggleTheme").innerHTML = '<i class="fa-solid fa-sun"></i>';
-    } else {
-        document.body.classList.remove("dark-theme");
-        document.getElementById("btnToggleTheme").innerHTML = '<i class="fa-solid fa-moon"></i>';
-    }
-}
-
-function toggleTheme() {
-    if (document.body.classList.contains("dark-theme")) {
-        document.body.classList.remove("dark-theme");
-        localStorage.setItem("ugv_theme", "light");
-        document.getElementById("btnToggleTheme").innerHTML = '<i class="fa-solid fa-moon"></i>';
-    } else {
-        document.body.classList.add("dark-theme");
-        localStorage.setItem("ugv_theme", "dark");
-        document.getElementById("btnToggleTheme").innerHTML = '<i class="fa-solid fa-sun"></i>';
-    }
-}
 
 function initMap() {
     // Default location: Kerala, India (10.8087, 76.7402)
@@ -120,11 +99,13 @@ function changeMapLayer(event) {
 // Fetch historical path on startup
 async function fetchHistory() {
     try {
-        const response = await fetch('/api/v1/telemetry/history?limit=200');
+        const response = await fetch('/api/v1/telemetry/history?limit=300');
         const json = await response.json();
         if (json.status === 'success' && json.data.length > 0) {
             pathCoordinates = [];
             totalDistanceMeters = 0;
+            anchorLat = null;
+            anchorLon = null;
 
             json.data.forEach(item => {
                 const lat = item.latitude;
@@ -134,18 +115,18 @@ async function fetchHistory() {
                 const hdop = item.hdop || 1.0;
 
                 if (lat && lon && lat !== 0 && lon !== 0) {
-                    if (lastLat !== null && lastLon !== null) {
-                        const dist = haversineDistance(lastLat, lastLon, lat, lon);
-                        // Anti-Drift Filtering: Only accumulate if movement > 3 meters AND valid movement
-                        if (dist >= 3.0 && dist < 500 && sats >= 6 && hdop <= 2.5 && speed > 0.0) {
+                    if (anchorLat !== null && anchorLon !== null) {
+                        const dist = haversineDistance(anchorLat, anchorLon, lat, lon);
+                        // Strict Deadband Filtering: Require 12m displacement & 3.0 km/h speed
+                        if (dist >= STATIONARY_DEADBAND_METERS && dist < 500 && sats >= 6 && hdop <= 2.5 && speed >= 3.0) {
                             totalDistanceMeters += dist;
                             pathCoordinates.push([lat, lon]);
-                            lastLat = lat;
-                            lastLon = lon;
+                            anchorLat = lat;
+                            anchorLon = lon;
                         }
                     } else {
-                        lastLat = lat;
-                        lastLon = lon;
+                        anchorLat = lat;
+                        anchorLon = lon;
                         pathCoordinates.push([lat, lon]);
                     }
                 }
@@ -227,14 +208,17 @@ function updateDashboard(data) {
         document.getElementById("fixStatus").innerText = "Antenna indoors or Searching Satellites...";
     }
 
-    // 4. Accurate Speed Filter (Stationary Drift Elimination)
+    // 4. Position & Coordinates
+    const lat = data.latitude || 0.0;
+    const lon = data.longitude || 0.0;
+    const alt = data.altitude || 0.0;
+    const heading = data.heading || 0.0;
     let rawSpeed = data.speed || 0.0;
-    // If speed is below 2.0 km/h or HDOP is noisy (> 2.5) or sats < 5, treat as stationary 0.0 km/h
-    let displaySpeed = (rawSpeed >= 2.0 && hdop <= 2.5 && sats >= 5) ? rawSpeed : 0.0;
 
-    document.getElementById("speedVal").innerText = displaySpeed.toFixed(1);
-    const speedPercent = Math.min((displaySpeed / 30) * 100, 100);
-    document.getElementById("speedBar").style.width = `${speedPercent}%`;
+    document.getElementById("latVal").innerText = `${lat.toFixed(6)}°`;
+    document.getElementById("lonVal").innerText = `${lon.toFixed(6)}°`;
+    document.getElementById("altVal").innerText = `${alt.toFixed(1)} m`;
+    document.getElementById("headingVal").innerText = `${heading.toFixed(1)}°`;
 
     // 5. LTE Cellular Signal (CSQ)
     const rssi = data.rssi || 0;
@@ -251,46 +235,53 @@ function updateDashboard(data) {
 
     signalBars.className = `signal-bars active-${activeLevel}`;
 
-    // 6. Coordinates & Heading
-    const lat = data.latitude || 0.0;
-    const lon = data.longitude || 0.0;
-    const alt = data.altitude || 0.0;
-    const heading = data.heading || 0.0;
-
-    document.getElementById("latVal").innerText = `${lat.toFixed(6)}°`;
-    document.getElementById("lonVal").innerText = `${lon.toFixed(6)}°`;
-    document.getElementById("altVal").innerText = `${alt.toFixed(1)} m`;
-    document.getElementById("headingVal").innerText = `${heading.toFixed(1)}°`;
-
-    // 7. Accurate Distance Accumulation (Anti-Drift Filtering)
+    // 6. Stationary Deadband Anchor Logic (100% Drift Elimination)
     if (lat !== 0 && lon !== 0 && fixMode >= 2) {
-        const newLatLng = [lat, lon];
+        const currentPos = [lat, lon];
 
-        if (lastLat !== null && lastLon !== null) {
-            const dist = haversineDistance(lastLat, lastLon, lat, lon);
-            // Strict Anti-Drift: Accumulate ONLY if distance >= 3.0 meters AND speed > 0 AND sats >= 6
-            if (dist >= 3.0 && dist < 500 && displaySpeed > 0.0 && sats >= 6 && hdop <= 2.5) {
-                totalDistanceMeters += dist;
+        if (anchorLat !== null && anchorLon !== null) {
+            const displacement = haversineDistance(anchorLat, anchorLon, lat, lon);
+
+            // Check if displacement is WITHIN 12-meter stationary deadband radius
+            if (displacement < STATIONARY_DEADBAND_METERS || rawSpeed < 3.0 || sats < 6 || hdop > 2.5) {
+                // Vehicle is STATIONARY (or minor GPS jitter)
+                document.getElementById("speedVal").innerText = "0.0";
+                document.getElementById("speedBar").style.width = "0%";
+
+                // Keep marker anchored at stable position
+                marker.setLatLng([anchorLat, anchorLon]);
+            } else {
+                // Vehicle is ACTUALLY MOVING (> 12m displacement & speed >= 3.0 km/h)
+                document.getElementById("speedVal").innerText = rawSpeed.toFixed(1);
+                const speedPercent = Math.min((rawSpeed / 30) * 100, 100);
+                document.getElementById("speedBar").style.width = `${speedPercent}%`;
+
+                // Accumulate Distance & Update Anchor
+                totalDistanceMeters += displacement;
                 document.getElementById("distanceVal").innerHTML = `${totalDistanceMeters.toFixed(1)} <small>meters</small>`;
-                lastLat = lat;
-                lastLon = lon;
-                pathCoordinates.push(newLatLng);
+
+                anchorLat = lat;
+                anchorLon = lon;
+                pathCoordinates.push(currentPos);
                 polyline.setLatLngs(pathCoordinates);
+                marker.setLatLng(currentPos);
             }
         } else {
-            lastLat = lat;
-            lastLon = lon;
-            pathCoordinates.push(newLatLng);
+            // First valid point anchor
+            anchorLat = lat;
+            anchorLon = lon;
+            pathCoordinates.push(currentPos);
             polyline.setLatLngs(pathCoordinates);
+            marker.setLatLng(currentPos);
+            document.getElementById("speedVal").innerText = "0.0";
+            document.getElementById("speedBar").style.width = "0%";
         }
 
-        marker.setLatLng(newLatLng);
         marker.setPopupContent(`
             <div style="font-family: sans-serif; font-size: 13px;">
                 <b>UGV-TRACKER-01</b><br>
                 Lat: ${lat.toFixed(6)}<br>
                 Lon: ${lon.toFixed(6)}<br>
-                Speed: ${displaySpeed.toFixed(1)} km/h<br>
                 Fix: ${fixBadge.innerText} (${sats} Sats)
             </div>
         `);
@@ -299,7 +290,7 @@ function updateDashboard(data) {
 
 function flashGenuinenessPulse() {
     const banner = document.getElementById("genuinenessBanner");
-    banner.style.transform = "scale(1.03)";
+    banner.style.transform = "scale(1.02)";
     banner.style.borderColor = "#10B981";
     setTimeout(() => {
         banner.style.transform = "scale(1)";
@@ -307,16 +298,25 @@ function flashGenuinenessPulse() {
 }
 
 function centerMap() {
-    if (lastLat !== null && lastLon !== null) {
-        map.setView([lastLat, lastLon], 17);
+    if (anchorLat !== null && anchorLon !== null) {
+        map.setView([anchorLat, anchorLon], 17);
     }
 }
 
-function clearTrail() {
+async function clearTrail() {
     pathCoordinates = [];
     polyline.setLatLngs([]);
     totalDistanceMeters = 0;
+    anchorLat = null;
+    anchorLon = null;
     document.getElementById("distanceVal").innerHTML = `0.0 <small>meters</small>`;
+
+    // Purge database history on server
+    try {
+        await fetch('/api/v1/telemetry/reset', { method: 'POST' });
+    } catch (e) {
+        console.error("Error resetting database history:", e);
+    }
 }
 
 // Calculate distance between two GPS coordinates in meters

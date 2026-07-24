@@ -84,6 +84,12 @@ async def get_history(limit: int = 100):
     history = database.get_history_telemetry(limit)
     return {"status": "success", "count": len(history), "data": history}
 
+# 5. Clear Database History
+@app.post("/api/v1/telemetry/reset")
+async def reset_history():
+    database.clear_telemetry()
+    return {"status": "success", "message": "Telemetry history cleared"}
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)

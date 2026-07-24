@@ -84,3 +84,10 @@ def get_history_telemetry(limit=100):
     rows = cursor.fetchall()
     conn.close()
     return [dict(r) for r in reversed(rows)]
+
+def clear_telemetry():
+    conn = sqlite3.connect(DB_FILE)
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM telemetry")
+    conn.commit()
+    conn.close()
