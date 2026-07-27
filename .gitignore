@@ -1,5 +1,7 @@
 # PlatformIO build & IDE files
 .pio
 .vscode/
-*.bak
-*.tmp
+# Database & Cache files
+backend/*.db
+backend/__pycache__/
+__pycache__/
