@@ -3,6 +3,11 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 import os
+import sys
+
+# Ensure backend directory is in sys.path for cloud deployment
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
 import database
 
 app = FastAPI(title="UGV Standalone GPS Tracker Backend", version="1.0.0")
