@@ -341,9 +341,19 @@ function updateDashboard(data) {
     document.getElementById("lonVal").innerText = `${lon.toFixed(6)}°`;
     document.getElementById("altVal").innerText = `${alt.toFixed(1)} m`;
 
+    const isOnline = (data.online !== false);
     const motionBadge = document.getElementById("motionStatusBadge");
-    let displaySpeed = (rawSpeed >= SPEED_THRESHOLD_KMH && isQualityFix) ? rawSpeed : 0.0;
 
+    if (!isOnline) {
+        motionBadge.className = "motion-status parked";
+        motionBadge.innerText = "OFFLINE";
+        fixBadge.innerText = "Hardware Offline";
+        fixBadge.style.color = "#EF4444";
+        document.getElementById("speedVal").innerText = "0.0";
+        return;
+    }
+
+    let displaySpeed = (rawSpeed >= SPEED_THRESHOLD_KMH && isQualityFix) ? rawSpeed : 0.0;
     document.getElementById("speedVal").innerText = displaySpeed.toFixed(1);
 
     if (displaySpeed >= SPEED_THRESHOLD_KMH) {

@@ -80,12 +80,36 @@ async def receive_get_telemetry(
     database.save_telemetry(data)
     return {"status": "success", "message": "Telemetry updated"}
 
-# 3. Latest Telemetry Endpoint (Web Dashboard Polling)
+from datetime import datetime, timezone
+
+# 3. Latest Telemetry Endpoint (Web Dashboard Polling with 45s Heartbeat Check)
 @app.get("/api/v1/telemetry/latest")
 async def get_latest():
     latest = database.get_latest_telemetry()
     if latest:
-        return {"status": "success", "data": latest}
+        # Check timestamp freshness (Heartbeat timeout = 45 seconds)
+        is_online = True
+        try:
+            created_at_str = latest.get("created_at")
+            if created_at_str:
+                # Parse created_at format: YYYY-MM-DD HH:MM:SS
+                record_time = datetime.strptime(created_at_str, "%Y-%m-%d %H:%M:%S").replace(tzinfo=timezone.utc)
+                now_time = datetime.now(timezone.utc)
+                age_seconds = (now_time - record_time).total_seconds()
+                if age_seconds > 45:
+                    is_online = False
+        except Exception:
+            pass
+
+        # Copy data and apply offline overrides if hardware is off
+        latest_data = dict(latest)
+        latest_data["online"] = is_online
+        if not is_online:
+            latest_data["speed"] = 0.0
+            latest_data["fix_valid"] = False
+            latest_data["fix_mode"] = 0
+
+        return {"status": "success", "data": latest_data}
     return {"status": "empty", "data": None}
 
 # 4. Telemetry History Endpoint (Trail Line on Map)
