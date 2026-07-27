@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>UGV FleetTrack — Mobile Live GPS Tracking</title>
+    <title>UGV FleetTrack — Live GPS & Telematics Analytics</title>
     
     <!-- Google Fonts: Outfit & JetBrains Mono -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -16,12 +16,15 @@
     <!-- FontAwesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
+    <!-- Chart.js for Telematics Analytics -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
     <!-- FleetTrack Mobile Dashboard Styles -->
     <link rel="stylesheet" href="/static/style.css">
 </head>
 <body class="light-theme">
     <div class="fleet-app">
-        <!-- Floating Top Header Bar (FleetTrack Mobile Header) -->
+        <!-- Floating Top Header Bar -->
         <header class="fleet-header">
             <div class="header-left">
                 <div class="vehicle-icon">
@@ -58,64 +61,133 @@
             </div>
         </main>
 
-        <!-- FleetTrack Bottom Sliding Sheet (Mobile Bottom Panel) -->
-        <section class="fleet-bottom-sheet">
-            <div class="sheet-drag-handle"></div>
+        <!-- Interactive Sliding Telemetry & Analytics Sheet -->
+        <section class="fleet-bottom-sheet sheet-normal" id="fleetSheet">
+            <div class="sheet-drag-handle" id="sheetDragHandle"></div>
 
-            <!-- Primary Speed & Distance Banner -->
-            <div class="speed-distance-row">
-                <div class="speed-box">
-                    <span class="speed-num" id="speedVal">0.0</span>
-                    <span class="speed-unit">km/h</span>
+            <!-- Sheet Header with Maximize/Minimize Controls & Tabs -->
+            <div class="sheet-control-header">
+                <div class="tab-group">
+                    <button class="tab-btn active" id="tabLiveBtn">
+                        <i class="fa-solid fa-gauge-high"></i> Live Telemetry
+                    </button>
+                    <button class="tab-btn" id="tabAnalyticsBtn">
+                        <i class="fa-chart-line fa-solid"></i> Analytics & Logs
+                    </button>
                 </div>
-                <div class="distance-box">
-                    <span class="dist-label">TRIP DISTANCE</span>
-                    <span class="dist-num" id="distanceVal">0.0 <small>m</small></span>
+                
+                <div class="sheet-toggle-actions">
+                    <button class="icon-toggle-btn" id="btnToggleSize" title="Maximize / Restore Sheet">
+                        <i class="fa-solid fa-expand" id="expandIcon"></i>
+                    </button>
+                    <button class="icon-toggle-btn" id="btnMinimizeSheet" title="Minimize Sheet">
+                        <i class="fa-solid fa-minus"></i>
+                    </button>
                 </div>
             </div>
 
-            <!-- Fix Quality & Satellite Bar -->
-            <div class="status-strip">
-                <div class="strip-item">
-                    <i class="fa-solid fa-satellite"></i>
-                    <div>
-                        <small>SATELLITES</small>
-                        <strong id="satellitesVal">--</strong>
+            <!-- TAB 1: LIVE TELEMETRY CONTENT -->
+            <div class="tab-content active" id="tabLiveContent">
+                <!-- Primary Speed & Distance Banner -->
+                <div class="speed-distance-row">
+                    <div class="speed-box">
+                        <span class="speed-num" id="speedVal">0.0</span>
+                        <span class="speed-unit">km/h</span>
+                    </div>
+                    <div class="distance-box">
+                        <span class="dist-label">TRIP DISTANCE</span>
+                        <span class="dist-num" id="distanceVal">0.0 <small>m</small></span>
                     </div>
                 </div>
-                <div class="strip-item">
-                    <i class="fa-solid fa-shield-halved"></i>
-                    <div>
-                        <small>GPS PRECISION</small>
-                        <strong id="fixModeBadge">Checking Fix...</strong>
+
+                <!-- Fix Quality & Satellite Bar -->
+                <div class="status-strip">
+                    <div class="strip-item">
+                        <i class="fa-solid fa-satellite"></i>
+                        <div>
+                            <small>SATELLITES</small>
+                            <strong id="satellitesVal">--</strong>
+                        </div>
+                    </div>
+                    <div class="strip-item">
+                        <i class="fa-solid fa-shield-halved"></i>
+                        <div>
+                            <small>GPS PRECISION</small>
+                            <strong id="fixModeBadge">Checking Fix...</strong>
+                        </div>
                     </div>
                 </div>
+
+                <!-- Coordinates & Location Info -->
+                <div class="location-card">
+                    <div class="loc-item">
+                        <span class="lbl">Latitude:</span>
+                        <span class="val" id="latVal">0.000000°</span>
+                    </div>
+                    <div class="loc-item">
+                        <span class="lbl">Longitude:</span>
+                        <span class="val" id="lonVal">0.000000°</span>
+                    </div>
+                    <div class="loc-item">
+                        <span class="lbl">Altitude:</span>
+                        <span class="val" id="altVal">0.0 m</span>
+                    </div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="sheet-actions">
+                    <button class="btn btn-primary" id="btnCenterMap">
+                        <i class="fa-solid fa-bullseye"></i> Center Vehicle
+                    </button>
+                    <button class="btn btn-secondary" id="btnClearTrail">
+                        <i class="fa-solid fa-trash-can"></i> Clear Route
+                    </button>
+                </div>
             </div>
 
-            <!-- Coordinates & Location Info -->
-            <div class="location-card">
-                <div class="loc-item">
-                    <span class="lbl">Latitude:</span>
-                    <span class="val" id="latVal">0.000000°</span>
+            <!-- TAB 2: TELEMATICS ANALYTICS & LOGS CONTENT -->
+            <div class="tab-content" id="tabAnalyticsContent">
+                <div class="analytics-header">
+                    <h3><i class="fa-solid fa-chart-area"></i> Telemetry Performance Charts</h3>
+                    <button class="btn btn-sm btn-secondary" id="btnExportCSV">
+                        <i class="fa-solid fa-download"></i> Export CSV
+                    </button>
                 </div>
-                <div class="loc-item">
-                    <span class="lbl">Longitude:</span>
-                    <span class="val" id="lonVal">0.000000°</span>
-                </div>
-                <div class="loc-item">
-                    <span class="lbl">Altitude:</span>
-                    <span class="val" id="altVal">0.0 m</span>
-                </div>
-            </div>
 
-            <!-- Action Buttons -->
-            <div class="sheet-actions">
-                <button class="btn btn-primary" id="btnCenterMap">
-                    <i class="fa-solid fa-bullseye"></i> Center Vehicle
-                </button>
-                <button class="btn btn-secondary" id="btnClearTrail">
-                    <i class="fa-solid fa-trash-can"></i> Clear Route
-                </button>
+                <!-- Speed & Altitude Chart -->
+                <div class="chart-card">
+                    <canvas id="speedChart" height="140"></canvas>
+                </div>
+
+                <!-- Satellite & RSSI Chart -->
+                <div class="chart-card">
+                    <canvas id="signalChart" height="140"></canvas>
+                </div>
+
+                <!-- Historical Telemetry Log Table -->
+                <div class="table-card">
+                    <h4><i class="fa-solid fa-list"></i> Raw Telemetry Logs</h4>
+                    <div class="table-scroll">
+                        <table class="telemetry-table">
+                            <thead>
+                                <tr>
+                                    <th>Time</th>
+                                    <th>Lat, Lon</th>
+                                    <th>Speed</th>
+                                    <th>Alt</th>
+                                    <th>Sats</th>
+                                    <th>CSQ</th>
+                                    <th>Fix Quality</th>
+                                </tr>
+                            </thead>
+                            <tbody id="logsTableBody">
+                                <tr>
+                                    <td colspan="7" class="loading-cell">Loading historical telemetry logs...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
             </div>
         </section>
     </div>

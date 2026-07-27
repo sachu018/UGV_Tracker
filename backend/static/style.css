@@ -1,4 +1,4 @@
-/* FleetTrack Mobile-Inspired Clean Light Theme */
+/* FleetTrack Mobile-Inspired Clean Light Theme & Analytics System */
 
 :root {
     --bg-main: #F8FAFC;
@@ -48,7 +48,7 @@ body {
     top: 16px;
     left: 16px;
     right: 16px;
-    height: 64px;
+    height: 60px;
     background: var(--panel-bg);
     border: 1px solid var(--panel-border);
     border-radius: 16px;
@@ -67,20 +67,20 @@ body {
 }
 
 .vehicle-icon {
-    width: 40px;
-    height: 40px;
+    width: 38px;
+    height: 38px;
     border-radius: 12px;
     background: linear-gradient(135deg, var(--primary), var(--secondary));
     color: #FFF;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 18px;
+    font-size: 16px;
     box-shadow: 0 4px 12px var(--primary-glow);
 }
 
 .vehicle-meta h2 {
-    font-size: 16px;
+    font-size: 15px;
     font-weight: 800;
     letter-spacing: 0.5px;
     color: var(--text-main);
@@ -145,7 +145,7 @@ body {
 
 .map-selector-overlay {
     position: absolute;
-    top: 92px;
+    top: 86px;
     right: 16px;
     z-index: 1000;
     background: var(--panel-bg);
@@ -171,22 +171,43 @@ body {
     cursor: pointer;
 }
 
-/* FleetTrack Bottom Sheet */
+/* FleetTrack Bottom Sheet & Interactive Sizing */
 .fleet-bottom-sheet {
     position: absolute;
     bottom: 0;
     left: 16px;
-    width: 400px;
+    width: 420px;
     background: var(--panel-bg);
     border: 1px solid var(--panel-border);
     border-bottom: none;
     border-radius: 20px 20px 0 0;
-    padding: 20px;
+    padding: 16px 20px 20px 20px;
     display: flex;
     flex-direction: column;
-    gap: 14px;
+    gap: 12px;
     z-index: 1000;
     box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.1);
+    transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+    max-height: 85vh;
+    overflow-y: auto;
+}
+
+/* Sheet Sizing States */
+.fleet-bottom-sheet.sheet-normal {
+    height: auto;
+}
+
+/* Maximized State: Laptop = 55vh, Mobile = 50vh (half screen) */
+.fleet-bottom-sheet.sheet-maximized {
+    height: 55vh;
+    width: 480px;
+}
+
+/* Minimized State: Only top drag handle and header visible */
+.fleet-bottom-sheet.sheet-minimized {
+    height: 52px;
+    overflow: hidden;
+    padding: 10px 20px;
 }
 
 .sheet-drag-handle {
@@ -194,7 +215,83 @@ body {
     height: 4px;
     background: var(--panel-border);
     border-radius: 2px;
-    margin: 0 auto 4px auto;
+    margin: 0 auto 6px auto;
+    cursor: pointer;
+}
+
+/* Sheet Control Header (Tabs & Toggle Icons) */
+.sheet-control-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.tab-group {
+    display: flex;
+    gap: 6px;
+    background: var(--card-bg);
+    padding: 3px;
+    border-radius: 12px;
+    border: 1px solid var(--panel-border);
+}
+
+.tab-btn {
+    padding: 6px 12px;
+    border-radius: 9px;
+    border: none;
+    background: transparent;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--text-muted);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.2s ease;
+}
+
+.tab-btn.active {
+    background: var(--panel-bg);
+    color: var(--primary);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.sheet-toggle-actions {
+    display: flex;
+    gap: 4px;
+}
+
+.icon-toggle-btn {
+    width: 30px;
+    height: 30px;
+    border-radius: 8px;
+    border: 1px solid var(--panel-border);
+    background: var(--card-bg);
+    color: var(--text-muted);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    transition: all 0.2s ease;
+}
+
+.icon-toggle-btn:hover {
+    background: var(--primary);
+    color: #FFF;
+    border-color: var(--primary);
+}
+
+/* Tab Contents */
+.tab-content {
+    display: none;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.tab-content.active {
+    display: flex;
 }
 
 /* Speed & Distance Box */
@@ -205,7 +302,7 @@ body {
     background: var(--card-bg);
     border: 1px solid var(--panel-border);
     border-radius: 14px;
-    padding: 14px 20px;
+    padding: 12px 18px;
 }
 
 .speed-box {
@@ -216,13 +313,13 @@ body {
 
 .speed-num {
     font-family: var(--font-mono);
-    font-size: 36px;
+    font-size: 34px;
     font-weight: 800;
     color: var(--primary);
 }
 
 .speed-unit {
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 700;
     color: var(--text-muted);
 }
@@ -241,13 +338,13 @@ body {
 
 .dist-num {
     font-family: var(--font-mono);
-    font-size: 20px;
+    font-size: 18px;
     font-weight: 700;
     color: var(--text-main);
 }
 
 .dist-num small {
-    font-size: 12px;
+    font-size: 11px;
     color: var(--text-muted);
 }
 
@@ -262,14 +359,14 @@ body {
     background: var(--card-bg);
     border: 1px solid var(--panel-border);
     border-radius: 12px;
-    padding: 10px 14px;
+    padding: 8px 12px;
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 8px;
 }
 
 .strip-item i {
-    font-size: 18px;
+    font-size: 16px;
     color: var(--primary);
 }
 
@@ -281,7 +378,7 @@ body {
 }
 
 .strip-item strong {
-    font-size: 13px;
+    font-size: 12px;
     font-weight: 700;
 }
 
@@ -290,10 +387,10 @@ body {
     background: var(--card-bg);
     border: 1px solid var(--panel-border);
     border-radius: 12px;
-    padding: 12px 16px;
+    padding: 10px 14px;
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: 4px;
 }
 
 .loc-item {
@@ -315,22 +412,27 @@ body {
 /* Action Buttons */
 .sheet-actions {
     display: flex;
-    gap: 10px;
+    gap: 8px;
 }
 
 .btn {
     flex: 1;
-    padding: 12px;
-    border-radius: 12px;
+    padding: 10px;
+    border-radius: 10px;
     border: none;
-    font-size: 13px;
+    font-size: 12px;
     font-weight: 700;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 8px;
+    gap: 6px;
     transition: all 0.2s ease;
+}
+
+.btn-sm {
+    padding: 6px 12px;
+    font-size: 11px;
 }
 
 .btn-primary {
@@ -345,14 +447,92 @@ body {
     border: 1px solid var(--panel-border);
 }
 
-/* Responsive Mobile Layout */
+/* Analytics Tab Styling */
+.analytics-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.analytics-header h3 {
+    font-size: 13px;
+    font-weight: 800;
+    color: var(--text-main);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.chart-card {
+    background: var(--card-bg);
+    border: 1px solid var(--panel-border);
+    border-radius: 12px;
+    padding: 10px;
+}
+
+/* Table Styling */
+.table-card {
+    background: var(--card-bg);
+    border: 1px solid var(--panel-border);
+    border-radius: 12px;
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.table-card h4 {
+    font-size: 11px;
+    font-weight: 800;
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.table-scroll {
+    max-height: 180px;
+    overflow-y: auto;
+}
+
+.telemetry-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 11px;
+}
+
+.telemetry-table th {
+    background: var(--panel-bg);
+    color: var(--text-muted);
+    font-weight: 700;
+    text-align: left;
+    padding: 6px 8px;
+    position: sticky;
+    top: 0;
+}
+
+.telemetry-table td {
+    padding: 6px 8px;
+    border-bottom: 1px solid var(--panel-border);
+    font-family: var(--font-mono);
+    font-size: 10px;
+}
+
+.loading-cell {
+    text-align: center;
+    color: var(--text-muted);
+    font-family: var(--font-sans);
+    padding: 15px !important;
+}
+
+/* Responsive Mobile Layout (50% Half Screen Height on Maximize) */
 @media (max-width: 768px) {
     .fleet-header {
         top: 10px;
         left: 10px;
         right: 10px;
         padding: 0 14px;
-        height: 58px;
+        height: 54px;
     }
 
     .fleet-bottom-sheet {
@@ -360,11 +540,17 @@ body {
         right: 0;
         width: 100%;
         border-radius: 24px 24px 0 0;
-        padding: 16px 16px 24px 16px;
+        padding: 14px 14px 20px 14px;
+    }
+
+    /* Maximize on mobile = 50% half screen height */
+    .fleet-bottom-sheet.sheet-maximized {
+        height: 50vh;
+        width: 100%;
     }
 
     .map-selector-overlay {
-        top: 76px;
+        top: 72px;
         right: 10px;
     }
 }
