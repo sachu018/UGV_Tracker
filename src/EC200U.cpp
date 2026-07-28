@@ -332,6 +332,16 @@ bool EC200U::postHTTP(const String &url, const String &jsonPayload, int &httpCod
     sendAT("AT+QHTTPCFG=\"contextid\",1", 1000);
     sendAT("AT+QHTTPCFG=\"requestheader\",0", 1000);
 
+    if (url.startsWith("https://")) {
+        sendAT("AT+QSSLCFG=\"sslversion\",1,4", 1000);
+        sendAT("AT+QSSLCFG=\"seclevel\",1,0", 1000);
+        sendAT("AT+QSSLCFG=\"sni\",1,1", 1000);
+        sendAT("AT+QSSLCFG=\"ciphersuite\",1,0xFFFF", 1000);
+        sendAT("AT+QHTTPCFG=\"sslctxid\",1", 1000);
+    } else {
+        sendAT("AT+QHTTPCFG=\"sslctxid\",0", 1000);
+    }
+
     // Clear buffer before sending command
     while (_serial->available()) _serial->read();
 
@@ -418,6 +428,8 @@ bool EC200U::getHTTP(const String &url, int &httpCode, String &responseBody) {
     if (url.startsWith("https://")) {
         sendAT("AT+QSSLCFG=\"sslversion\",1,4", 1000);
         sendAT("AT+QSSLCFG=\"seclevel\",1,0", 1000);
+        sendAT("AT+QSSLCFG=\"sni\",1,1", 1000); // Enable Server Name Indication (SNI) for Cloudflare/Render SSL
+        sendAT("AT+QSSLCFG=\"ciphersuite\",1,0xFFFF", 1000);
         sendAT("AT+QHTTPCFG=\"sslctxid\",1", 1000);
     } else {
         sendAT("AT+QHTTPCFG=\"sslctxid\",0", 1000);
@@ -448,7 +460,7 @@ bool EC200U::getHTTP(const String &url, int &httpCode, String &responseBody) {
     String urcResp = "";
     bool getOk = false;
 
-    while (millis() - start < 15000) {
+    while (millis() - start < 20000) {
         while (_serial->available()) {
             char c = (char)_serial->read();
             urcResp += c;
@@ -462,21 +474,28 @@ bool EC200U::getHTTP(const String &url, int &httpCode, String &responseBody) {
     }
 
     if (!getOk) {
-        LOG_ERROR("HTTP GET timeout");
+        LOG_ERROR("HTTP GET timeout. URC raw: " + urcResp);
         while (_serial->available()) _serial->read();
         return false;
     }
 
+    // Parse HTTP Response code from +QHTTPGET: <err>[,<httprspcode>[,<contentlen>]]
     int qIdx = urcResp.indexOf("+QHTTPGET:");
     if (qIdx != -1) {
         String sub = urcResp.substring(qIdx + 10);
+        sub.trim();
         int comma1 = sub.indexOf(',');
         if (comma1 != -1) {
             int comma2 = sub.indexOf(',', comma1 + 1);
             if (comma2 != -1) {
                 String codeStr = sub.substring(comma1 + 1, comma2);
                 httpCode = codeStr.toInt();
+            } else {
+                String codeStr = sub.substring(comma1 + 1);
+                httpCode = codeStr.toInt();
             }
+        } else {
+            LOG_ERROR("Modem HTTP GET Error URC: +QHTTPGET: " + sub);
         }
     }
 
