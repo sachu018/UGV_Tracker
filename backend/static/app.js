@@ -1,4 +1,4 @@
-// UGV FleetTrack — Mobile Dashboard Logic & Indoor Noise Hardening
+// UGV FleetTrack — Live Map, CSV Export & Dedicated History Map Logic
 
 let map;
 let marker;
@@ -7,13 +7,21 @@ let currentTileLayer = null;
 let pathCoordinates = [];
 let totalDistanceMeters = 0.0;
 
+// Dedicated History Map Modal Variables
+let historyMap = null;
+let historyPolyline = null;
+let historyStartMarker = null;
+let historyEndMarker = null;
+let historyTileLayer = null;
+let cachedHistoryData = [];
+
 // Strict Indoor & Stationary Noise Hardening Thresholds
 let anchorLat = null;
 let anchorLon = null;
-const DISPLACEMENT_THRESHOLD_METERS = 15.0; // Requires at least 15m real movement
-const SPEED_THRESHOLD_KMH = 3.5;           // Ignores speed noise < 3.5 km/h
-const MAX_ALLOWED_HDOP = 1.8;               // Ignores indoor multipath noise HDOP > 1.8
-const MIN_REQUIRED_SATELLITES = 7;           // Requires at least 7 satellite locks
+const DISPLACEMENT_THRESHOLD_METERS = 15.0;
+const SPEED_THRESHOLD_KMH = 3.5;
+const MAX_ALLOWED_HDOP = 1.8;
+const MIN_REQUIRED_SATELLITES = 7;
 
 const mapLayers = {
     google_roadmap: 'https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',
@@ -24,16 +32,12 @@ const mapLayers = {
 // Initialize Leaflet Map on Load
 document.addEventListener("DOMContentLoaded", () => {
     initMap();
+    initControls();
     fetchHistory();
     setInterval(fetchLatestTelemetry, 2000);
-
-    document.getElementById("btnCenterMap").addEventListener("click", centerMap);
-    document.getElementById("btnClearTrail").addEventListener("click", clearTrail);
-    document.getElementById("mapTypeSelect").addEventListener("change", changeMapLayer);
 });
 
 function initMap() {
-    // Default location: Kerala, India (10.8087, 76.7402)
     const initialLat = 10.8087;
     const initialLon = 76.7402;
 
@@ -43,13 +47,11 @@ function initMap() {
 
     L.control.zoom({ position: 'bottomright' }).addTo(map);
 
-    // Set Google Maps (Roadmap) by default
     currentTileLayer = L.tileLayer(mapLayers.google_roadmap, {
         attribution: '&copy; Google Maps',
         maxZoom: 20
     }).addTo(map);
 
-    // Custom UGV Vehicle Marker Icon
     const ugvIcon = L.divIcon({
         className: 'ugv-custom-marker',
         html: `
@@ -76,7 +78,6 @@ function initMap() {
     marker = L.marker([initialLat, initialLon], { icon: ugvIcon }).addTo(map);
     marker.bindPopup("<b>UGV-TRACKER-01</b><br>Awaiting Telemetry...");
 
-    // Bright Blue Polyline Trail
     polyline = L.polyline([], {
         color: '#0284C7',
         weight: 5,
@@ -84,6 +85,16 @@ function initMap() {
         lineCap: 'round',
         lineJoin: 'round'
     }).addTo(map);
+}
+
+function initControls() {
+    document.getElementById("btnCenterMap").addEventListener("click", centerMap);
+    document.getElementById("btnClearTrail").addEventListener("click", clearTrail);
+    document.getElementById("mapTypeSelect").addEventListener("change", changeMapLayer);
+    
+    document.getElementById("btnDownloadCSV").addEventListener("click", exportCSV);
+    document.getElementById("btnViewHistoryMap").addEventListener("click", openHistoryModal);
+    document.getElementById("btnCloseHistoryModal").addEventListener("click", closeHistoryModal);
 }
 
 function changeMapLayer(event) {
@@ -103,6 +114,7 @@ async function fetchHistory() {
         const response = await fetch('/api/v1/telemetry/history?limit=300');
         const json = await response.json();
         if (json.status === 'success' && json.data.length > 0) {
+            cachedHistoryData = json.data;
             pathCoordinates = [];
             totalDistanceMeters = 0;
             anchorLat = null;
@@ -118,7 +130,6 @@ async function fetchHistory() {
                 if (lat && lon && lat !== 0 && lon !== 0) {
                     if (anchorLat !== null && anchorLon !== null) {
                         const dist = haversineDistance(anchorLat, anchorLon, lat, lon);
-                        // Strict Indoor Hardening Filter: Displacement >= 15m AND Speed >= 3.5 km/h AND HDOP <= 1.8 AND Sats >= 7
                         if (dist >= DISPLACEMENT_THRESHOLD_METERS && dist < 500 && sats >= MIN_REQUIRED_SATELLITES && hdop <= MAX_ALLOWED_HDOP && speed >= SPEED_THRESHOLD_KMH) {
                             totalDistanceMeters += dist;
                             pathCoordinates.push([lat, lon]);
@@ -267,6 +278,103 @@ function updateDashboard(data) {
     }
 }
 
+// Export Telemetry Logs to CSV File
+function exportCSV() {
+    if (!cachedHistoryData || cachedHistoryData.length === 0) {
+        alert("No telemetry logs available to export.");
+        return;
+    }
+
+    let csvContent = "data:text/csv;charset=utf-8,ID,Timestamp,Latitude,Longitude,Altitude,Speed,Heading,HDOP,Satellites,FixMode,RSSI,Battery\n";
+
+    cachedHistoryData.forEach(row => {
+        csvContent += `${row.id},${row.created_at || ''},${row.latitude},${row.longitude},${row.altitude},${row.speed},${row.heading},${row.hdop},${row.satellites},${row.fix_mode},${row.rssi},${row.battery}\n`;
+    });
+
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `UGV_Telemetry_Logs_${new Date().toISOString().slice(0,10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
+
+// Dedicated History Route Map Modal Functions
+function openHistoryModal() {
+    const modal = document.getElementById("historyModal");
+    modal.classList.add("active");
+
+    if (!historyMap) {
+        historyMap = L.map('historyMap', { zoomControl: true }).setView([10.8087, 76.7402], 17);
+        historyTileLayer = L.tileLayer(mapLayers.google_roadmap, { attribution: '&copy; Google Maps', maxZoom: 20 }).addTo(historyMap);
+        historyPolyline = L.polyline([], { color: '#2563EB', weight: 5, opacity: 0.9 }).addTo(historyMap);
+    }
+
+    setTimeout(() => {
+        historyMap.invalidateSize();
+        renderHistoryModalData();
+    }, 200);
+}
+
+function closeHistoryModal() {
+    document.getElementById("historyModal").classList.remove("active");
+}
+
+function renderHistoryModalData() {
+    if (!cachedHistoryData || cachedHistoryData.length === 0) return;
+
+    let hCoords = [];
+    let maxSpeed = 0.0;
+    let hDistance = 0.0;
+    let hAnchorLat = null;
+    let hAnchorLon = null;
+
+    cachedHistoryData.forEach(item => {
+        const lat = item.latitude;
+        const lon = item.longitude;
+        const speed = item.speed || 0.0;
+
+        if (speed > maxSpeed) maxSpeed = speed;
+
+        if (lat && lon && lat !== 0 && lon !== 0) {
+            if (hAnchorLat !== null && hAnchorLon !== null) {
+                const dist = haversineDistance(hAnchorLat, hAnchorLon, lat, lon);
+                if (dist >= DISPLACEMENT_THRESHOLD_METERS && dist < 500) {
+                    hDistance += dist;
+                    hCoords.push([lat, lon]);
+                    hAnchorLat = lat;
+                    hAnchorLon = lon;
+                }
+            } else {
+                hAnchorLat = lat;
+                hAnchorLon = lon;
+                hCoords.push([lat, lon]);
+            }
+        }
+    });
+
+    document.getElementById("hPointsVal").innerText = cachedHistoryData.length;
+    document.getElementById("hMaxSpeedVal").innerText = `${maxSpeed.toFixed(1)} km/h`;
+    document.getElementById("hDistanceVal").innerText = `${hDistance.toFixed(1)} m`;
+
+    historyPolyline.setLatLngs(hCoords);
+
+    if (hCoords.length > 0) {
+        if (historyStartMarker) historyMap.removeLayer(historyStartMarker);
+        if (historyEndMarker) historyMap.removeLayer(historyEndMarker);
+
+        const startPos = hCoords[0];
+        const endPos = hCoords[hCoords.length - 1];
+
+        historyStartMarker = L.marker(startPos).addTo(historyMap).bindPopup("<b>Trip Origin</b>");
+        historyEndMarker = L.marker(endPos).addTo(historyMap).bindPopup("<b>Trip End / Current Position</b>");
+
+        const bounds = L.latLngBounds(hCoords);
+        historyMap.fitBounds(bounds, { padding: [40, 40] });
+    }
+}
+
 function centerMap() {
     if (anchorLat !== null && anchorLon !== null) {
         map.setView([anchorLat, anchorLon], 17);
@@ -284,6 +392,7 @@ async function clearTrail() {
     try {
         await fetch('/api/v1/telemetry/reset', { method: 'POST' });
         console.log("Server database history purged");
+        cachedHistoryData = [];
     } catch (e) {
         console.error("Error resetting database history:", e);
     }

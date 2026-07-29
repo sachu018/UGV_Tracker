@@ -43,7 +43,7 @@
             </div>
         </header>
 
-        <!-- Fullscreen Map -->
+        <!-- Fullscreen Main Map -->
         <main class="fleet-map-container">
             <div id="map"></div>
 
@@ -108,7 +108,7 @@
                 </div>
             </div>
 
-            <!-- Action Buttons -->
+            <!-- Action Buttons Grid -->
             <div class="sheet-actions">
                 <button class="btn btn-primary" id="btnCenterMap">
                     <i class="fa-solid fa-bullseye"></i> Center Vehicle
@@ -117,7 +117,41 @@
                     <i class="fa-solid fa-trash-can"></i> Clear Route
                 </button>
             </div>
+
+            <div class="sheet-actions">
+                <button class="btn btn-secondary" id="btnViewHistoryMap">
+                    <i class="fa-solid fa-map-location-dot"></i> View History Map
+                </button>
+                <button class="btn btn-secondary" id="btnDownloadCSV">
+                    <i class="fa-solid fa-file-csv"></i> Export CSV Logs
+                </button>
+            </div>
         </section>
+
+        <!-- Separate Dedicated History Route Map Modal -->
+        <div class="modal-overlay" id="historyModal">
+            <div class="modal-container">
+                <div class="modal-header">
+                    <div class="modal-title">
+                        <i class="fa-solid fa-route"></i>
+                        <h3>UGV-TRACKER-01 — Dedicated History Route Map</h3>
+                    </div>
+                    <button class="modal-close-btn" id="btnCloseHistoryModal">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                </div>
+                
+                <div class="modal-stats-bar">
+                    <div class="mstat"><small>TOTAL LOGGED POINTS</small><strong id="hPointsVal">0</strong></div>
+                    <div class="mstat"><small>MAX SPEED</small><strong id="hMaxSpeedVal">0.0 km/h</strong></div>
+                    <div class="mstat"><small>HISTORICAL DISTANCE</small><strong id="hDistanceVal">0.0 m</strong></div>
+                </div>
+
+                <div class="modal-map-wrapper">
+                    <div id="historyMap"></div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- Leaflet JS -->
