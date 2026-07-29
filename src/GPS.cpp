@@ -26,16 +26,29 @@ const GPSData& GPS::getData() const {
 }
 
 void GPS::printDebug() const {
+    String fixModeStr = "No Fix";
+    if (_currentData.fixMode == 2) fixModeStr = "2D Fix";
+    else if (_currentData.fixMode == 3) fixModeStr = "3D GNSS";
+    else if (_currentData.fixMode == 4) fixModeStr = "DGPS";
+
     if (_currentData.valid) {
-        DEBUG_SERIAL.printf("[GPS] FIX OK | Lat: %.6f, Lon: %.6f | Alt: %.1fm | Speed: %.1f km/h | Satellites: %d | Time: %s\n",
+        DEBUG_SERIAL.printf("[GPS] FIX OK (%s) | Satellites: %d | Lat: %.6f, Lon: %.6f | Alt: %.1fm | Speed: %.1f km/h | HDOP: %.1f | Time: %s\n",
+            fixModeStr.c_str(),
+            _currentData.satellites,
             _currentData.latitude,
             _currentData.longitude,
             _currentData.altitude,
             _currentData.speed,
-            _currentData.satellites,
+            _currentData.hdop,
             _currentData.utc.c_str()
         );
     } else {
-        DEBUG_SERIAL.println("[GPS] Searching for satellites (NO FIX)...");
+        DEBUG_SERIAL.printf("[GPS] SEARCHING... | Satellites Captured: %d | Fix Level: %s (Mode %d) | HDOP: %.1f | Time: %s\n",
+            _currentData.satellites,
+            fixModeStr.c_str(),
+            _currentData.fixMode,
+            _currentData.hdop,
+            _currentData.utc.c_str()
+        );
     }
 }

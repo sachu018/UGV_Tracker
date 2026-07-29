@@ -213,15 +213,23 @@ function updateDashboard(data) {
         return;
     }
 
-    let displaySpeed = (rawSpeed >= SPEED_THRESHOLD_KMH && isQualityFix) ? rawSpeed : 0.0;
-    document.getElementById("speedVal").innerText = displaySpeed.toFixed(1);
-
-    if (displaySpeed >= SPEED_THRESHOLD_KMH) {
-        motionBadge.className = "motion-status moving";
-        motionBadge.innerText = "MOVING";
-    } else {
+    if (!isQualityFix) {
         motionBadge.className = "motion-status parked";
-        motionBadge.innerText = "PARKED";
+        motionBadge.innerText = "SEARCHING FIX";
+        fixBadge.innerText = sats > 0 ? `Searching Fix (${sats} Sats)` : "Searching Satellites...";
+        fixBadge.style.color = "#F59E0B";
+        document.getElementById("speedVal").innerText = "0.0";
+    } else {
+        let displaySpeed = rawSpeed >= SPEED_THRESHOLD_KMH ? rawSpeed : 0.0;
+        document.getElementById("speedVal").innerText = displaySpeed.toFixed(1);
+
+        if (displaySpeed >= SPEED_THRESHOLD_KMH) {
+            motionBadge.className = "motion-status moving";
+            motionBadge.innerText = "MOVING";
+        } else {
+            motionBadge.className = "motion-status parked";
+            motionBadge.innerText = "PARKED";
+        }
     }
 
     if (lat !== 0 && lon !== 0 && fixMode >= 2) {

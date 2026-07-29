@@ -82,11 +82,15 @@ void Tracker::handleState() {
             _gps.update();
             _gps.printDebug();
 
-            if (_gps.hasFix()) {
-                LOG_INFO("GPS Fix Acquired!");
+            uint32_t now = millis();
+            if (now - _lastUploadMs >= TELEMETRY_INTERVAL_MS) {
+                _lastUploadMs = now;
+                setState(TrackerState::UPLOAD);
+            } else if (_gps.hasFix()) {
+                LOG_INFO("GPS 3D Fix Acquired!");
                 setState(TrackerState::TRACK);
             } else {
-                delay(1000);
+                delay(500);
             }
             break;
         }
