@@ -1,4 +1,4 @@
-// UGV FleetTrack — Live Map, CSV Export & Dedicated History Map Logic
+// UGV FleetTrack — System Power, SIM Cellular & GPS Hardware Monitoring
 
 let map;
 let marker;
@@ -168,41 +168,84 @@ async function fetchLatestTelemetry() {
         }
     } catch (e) {
         console.error("Error fetching latest telemetry:", e);
-        document.getElementById("motionStatusBadge").className = "motion-status parked";
-        document.getElementById("motionStatusBadge").innerText = "OFFLINE";
+        setSystemOffline();
     }
 }
 
+function setSystemOffline() {
+    const powerChip = document.getElementById("systemPowerChip");
+    powerChip.className = "system-power-chip unpowered";
+    document.getElementById("powerText").innerText = "UNPOWERED / OFFLINE";
+
+    const motionBadge = document.getElementById("motionStatusBadge");
+    motionBadge.className = "motion-chip parked";
+    motionBadge.innerText = "OFFLINE";
+
+    document.getElementById("fixModeBadge").innerText = "Hardware Offline";
+    document.getElementById("fixModeBadge").style.color = "#EF4444";
+    document.getElementById("netStatusVal").innerText = "Disconnected";
+    document.getElementById("netStatusVal").className = "";
+    document.getElementById("gpsModuleState").innerText = "Unpowered";
+    document.getElementById("gpsModuleState").className = "";
+    document.getElementById("speedVal").innerText = "0.0";
+}
+
 function updateDashboard(data) {
+    const isOnline = (data.online !== false);
+
+    // 1. Prominent System Power & Online Status
+    const powerChip = document.getElementById("systemPowerChip");
+    if (isOnline) {
+        powerChip.className = "system-power-chip";
+        document.getElementById("powerText").innerText = "SYSTEM POWERED & ONLINE";
+    } else {
+        setSystemOffline();
+        return;
+    }
+
+    // 2. Battery & Signal CSQ Status
     const bat = data.battery || 4.2;
     document.getElementById("batteryVal").innerText = `${bat.toFixed(1)}V`;
     
     const rssi = data.rssi || 0;
-    document.getElementById("rssiVal").innerText = `${rssi} CSQ`;
+    let signalText = `${rssi} CSQ`;
+    if (rssi >= 20) signalText += " (Excellent)";
+    else if (rssi >= 12) signalText += " (Good)";
+    else if (rssi > 0) signalText += " (Fair)";
+    else signalText = "No Signal";
 
+    document.getElementById("rssiVal").innerText = signalText;
+    document.getElementById("simCarrierVal").innerText = "Airtel 4G (airtelgprs.com)";
+    document.getElementById("netStatusVal").innerText = "Registered (4G LTE)";
+    document.getElementById("netStatusVal").className = "text-green";
+
+    // 3. GNSS / GPS Hardware Status
     const sats = data.satellites || 0;
     const hdop = data.hdop || 1.0;
     const fixMode = data.fix_mode !== undefined ? data.fix_mode : (data.fix_valid ? 3 : 0);
     const fixBadge = document.getElementById("fixModeBadge");
 
-    document.getElementById("satellitesVal").innerText = sats;
+    document.getElementById("gpsModuleState").innerText = "Active & Enabled";
+    document.getElementById("gpsModuleState").className = "text-green";
+    document.getElementById("satellitesVal").innerText = `${sats} Satellites`;
 
     const isQualityFix = (fixMode >= 3 && sats >= MIN_REQUIRED_SATELLITES && hdop <= MAX_ALLOWED_HDOP);
 
     if (fixMode === 4) {
-        fixBadge.innerText = "DGPS (Sub-Meter)";
+        fixBadge.innerText = "DGPS Sub-Meter";
         fixBadge.style.color = "#0284C7";
     } else if (isQualityFix) {
-        fixBadge.innerText = "3D GNSS (High Acc)";
+        fixBadge.innerText = `3D GNSS LOCK (HDOP: ${hdop.toFixed(1)})`;
         fixBadge.style.color = "#10B981";
     } else if (sats >= 4 && sats < MIN_REQUIRED_SATELLITES) {
-        fixBadge.innerText = "2D Fix (Low Acc)";
+        fixBadge.innerText = `2D Fix (Low Acc)`;
         fixBadge.style.color = "#F59E0B";
     } else {
-        fixBadge.innerText = "Indoor Noise / No Fix";
-        fixBadge.style.color = "#EF4444";
+        fixBadge.innerText = sats > 0 ? `Searching Fix (${sats} Sats)` : "Searching Satellites...";
+        fixBadge.style.color = "#F59E0B";
     }
 
+    // 4. Position & Speed
     const lat = data.latitude || 0.0;
     const lon = data.longitude || 0.0;
     const alt = data.altitude || 0.0;
@@ -212,44 +255,33 @@ function updateDashboard(data) {
     document.getElementById("lonVal").innerText = `${lon.toFixed(6)}°`;
     document.getElementById("altVal").innerText = `${alt.toFixed(1)} m`;
 
-    const isOnline = (data.online !== false);
     const motionBadge = document.getElementById("motionStatusBadge");
 
-    if (!isOnline) {
-        motionBadge.className = "motion-status parked";
-        motionBadge.innerText = "OFFLINE";
-        fixBadge.innerText = "Hardware Offline";
-        fixBadge.style.color = "#EF4444";
-        document.getElementById("speedVal").innerText = "0.0";
-        return;
-    }
-
     if (!isQualityFix) {
-        motionBadge.className = "motion-status parked";
+        motionBadge.className = "motion-chip parked";
         motionBadge.innerText = "SEARCHING FIX";
-        fixBadge.innerText = sats > 0 ? `Searching Fix (${sats} Sats)` : "Searching Satellites...";
-        fixBadge.style.color = "#F59E0B";
         document.getElementById("speedVal").innerText = "0.0";
     } else {
         let displaySpeed = rawSpeed >= SPEED_THRESHOLD_KMH ? rawSpeed : 0.0;
         document.getElementById("speedVal").innerText = displaySpeed.toFixed(1);
 
         if (displaySpeed >= SPEED_THRESHOLD_KMH) {
-            motionBadge.className = "motion-status moving";
+            motionBadge.className = "motion-chip moving";
             motionBadge.innerText = "MOVING";
         } else {
-            motionBadge.className = "motion-status parked";
+            motionBadge.className = "motion-chip parked";
             motionBadge.innerText = "PARKED";
         }
     }
 
+    // 5. Map Anchor & Route Polyline
     if (lat !== 0 && lon !== 0 && fixMode >= 2) {
         const currentPos = [lat, lon];
 
         if (anchorLat !== null && anchorLon !== null) {
             const displacement = haversineDistance(anchorLat, anchorLon, lat, lon);
 
-            if (displacement < DISPLACEMENT_THRESHOLD_METERS || !isQualityFix || displaySpeed < SPEED_THRESHOLD_KMH) {
+            if (displacement < DISPLACEMENT_THRESHOLD_METERS || !isQualityFix || (rawSpeed < SPEED_THRESHOLD_KMH)) {
                 marker.setLatLng([anchorLat, anchorLon]);
             } else {
                 totalDistanceMeters += displacement;
@@ -272,7 +304,7 @@ function updateDashboard(data) {
                 <b>UGV-TRACKER-01</b><br>
                 Lat: ${lat.toFixed(6)}<br>
                 Lon: ${lon.toFixed(6)}<br>
-                Fix: ${fixBadge.innerText} (${sats} Sats)
+                Fix: ${fixBadge.innerText}
             </div>
         `);
     }

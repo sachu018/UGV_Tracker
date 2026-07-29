@@ -29,17 +29,19 @@
                 </div>
                 <div class="vehicle-meta">
                     <h2>UGV-TRACKER-01</h2>
-                    <span class="motion-status parked" id="motionStatusBadge">PARKED</span>
+                    <!-- Prominent System Power & Online Indicator -->
+                    <div class="system-power-chip" id="systemPowerChip">
+                        <span class="power-pulse-dot" id="powerPulseDot"></span>
+                        <span class="power-text" id="powerText">SYSTEM POWERED</span>
+                    </div>
                 </div>
             </div>
             
             <div class="header-right">
-                <div class="mini-chip battery-chip" id="batteryChip">
-                    <i class="fa-solid fa-battery-full"></i> <span id="batteryVal">4.2V</span>
+                <div class="mini-chip battery-chip" id="batteryChip" title="Monitored System Voltage">
+                    <i class="fa-solid fa-bolt"></i> <span id="batteryVal">4.2V</span>
                 </div>
-                <div class="mini-chip signal-chip" id="signalChip">
-                    <i class="fa-solid fa-signal"></i> <span id="rssiVal">-- CSQ</span>
-                </div>
+                <div class="mini-chip motion-chip" id="motionStatusBadge">PARKED</div>
             </div>
         </header>
 
@@ -74,19 +76,45 @@
                 </div>
             </div>
 
-            <!-- Fix Quality & Satellite Bar -->
-            <div class="status-strip">
-                <div class="strip-item">
-                    <i class="fa-solid fa-satellite"></i>
-                    <div>
-                        <small>SATELLITES</small>
-                        <strong id="satellitesVal">--</strong>
+            <!-- Readable SIM & Cellular Network Connection Card -->
+            <div class="telecom-card">
+                <div class="telecom-header">
+                    <i class="fa-solid fa-sim-card"></i>
+                    <span>SIM & CELLULAR LTE STATUS</span>
+                </div>
+                <div class="telecom-row">
+                    <div class="titem">
+                        <small>CARRIER / APN</small>
+                        <strong id="simCarrierVal">Airtel 4G (airtelgprs.com)</strong>
+                    </div>
+                    <div class="titem">
+                        <small>CELLULAR NETWORK</small>
+                        <strong class="text-green" id="netStatusVal">Registered (4G LTE)</strong>
+                    </div>
+                    <div class="titem">
+                        <small>SIGNAL STRENGTH</small>
+                        <strong id="rssiVal">-- CSQ</strong>
                     </div>
                 </div>
-                <div class="strip-item">
-                    <i class="fa-solid fa-shield-halved"></i>
-                    <div>
-                        <small>GPS PRECISION</small>
+            </div>
+
+            <!-- Readable GPS Hardware Status Card -->
+            <div class="telecom-card">
+                <div class="telecom-header">
+                    <i class="fa-solid fa-satellite-dish"></i>
+                    <span>GNSS / GPS HARDWARE STATUS</span>
+                </div>
+                <div class="telecom-row">
+                    <div class="titem">
+                        <small>MODULE STATE</small>
+                        <strong class="text-green" id="gpsModuleState">Active & Enabled</strong>
+                    </div>
+                    <div class="titem">
+                        <small>SATELLITES TRACKED</small>
+                        <strong id="satellitesVal">-- Satellites</strong>
+                    </div>
+                    <div class="titem">
+                        <small>PRECISION & FIX LEVEL</small>
                         <strong id="fixModeBadge">Checking Fix...</strong>
                     </div>
                 </div>
