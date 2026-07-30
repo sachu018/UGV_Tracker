@@ -129,7 +129,8 @@ void Tracker::handleState() {
                          "&field6=" + String(tData.signalRssi) +
                          "&field7=" + String(tData.batteryVoltage, 2) +
                          "&field8=" + String(tData.gps.fixMode) +
-                         "&device_id=" + tData.deviceId;
+                         "&device_id=" + tData.deviceId +
+                         "&key=" + String(DEVICE_API_KEY);
 
             LOG_INFO("Uploading Telemetry to FastAPI Backend...");
             bool success = _modem.getHTTP(url, httpCode, respBody);
