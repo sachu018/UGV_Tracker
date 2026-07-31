@@ -132,13 +132,14 @@ int EC200U::getSignalStrength() {
 }
 
 bool EC200U::enableGPS() {
-    LOG_INFO("Enabling EC200U GNSS/GPS...");
+    LOG_INFO("Enabling EC200U GNSS/GPS (Multi-Constellation: GPS+GLONASS+BeiDou)...");
+    sendAT("AT+QGPSCFG=\"gnssconfig\",1", 1000); // Enable all satellite constellations
     String resp = sendAT("AT+QGPS=1", 2000);
     
     // CME ERROR 504 means GNSS is already turned on
     if (resp.indexOf("OK") != -1 || resp.indexOf("504") != -1) {
         _isGpsEnabled = true;
-        LOG_INFO("GPS enabled.");
+        LOG_INFO("GPS enabled successfully.");
         return true;
     }
 
