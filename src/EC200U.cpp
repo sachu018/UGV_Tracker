@@ -504,3 +504,16 @@ bool EC200U::getHTTP(const String &url, int &httpCode, String &responseBody) {
     while (_serial->available()) _serial->read();
     return (httpCode == 200 || httpCode == 201);
 }
+
+bool EC200U::setLowPowerMode(bool enable) {
+    if (enable) {
+        LOG_INFO("Configuring EC200U Modem for Deep Sleep Low-Power Mode...");
+        disableGPS();
+        sendAT("AT+CFUN=4", 2000); // Minimum functionality / Disable RF transceiver
+        return true;
+    } else {
+        LOG_INFO("Waking EC200U Modem from Low-Power Mode...");
+        sendAT("AT+CFUN=1", 2000); // Re-enable full RF transceiver
+        return true;
+    }
+}

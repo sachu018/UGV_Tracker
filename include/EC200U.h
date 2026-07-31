@@ -20,6 +20,7 @@ public:
     bool checkSIM();
     bool waitForNetwork(uint32_t timeoutMs = 30000);
     int getSignalStrength(); // Returns CSQ (0..31, 99)
+    bool setLowPowerMode(bool enable);
 
     // GPS / GNSS operations
     bool enableGPS();

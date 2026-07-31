@@ -26,6 +26,7 @@ enum class TrackerState {
     WAIT_GPS_FIX,
     TRACK,
     UPLOAD,
+    PARKED_SLEEP,
     ERROR_STATE
 };
 
@@ -39,6 +40,7 @@ inline String stateToString(TrackerState state) {
         case TrackerState::WAIT_GPS_FIX: return "WAIT_GPS_FIX";
         case TrackerState::TRACK:        return "TRACK";
         case TrackerState::UPLOAD:       return "UPLOAD";
+        case TrackerState::PARKED_SLEEP: return "PARKED_SLEEP";
         case TrackerState::ERROR_STATE:  return "ERROR_STATE";
         default:                         return "UNKNOWN";
     }

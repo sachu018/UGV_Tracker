@@ -25,10 +25,14 @@
 #define DEVICE_ID           "UGV-TRACKER-01"
 #define DEVICE_API_KEY      "0ddfccf1d3fca880135268e79197564a3fabc788f2a447c2"
 
-// Timing & Retries (ThingSpeak requires at least 15 seconds between updates)
+// Timing & Retries
 #define GPS_POLL_INTERVAL_MS      2000   // 2 seconds
-#define TELEMETRY_INTERVAL_MS     15000  // 15 seconds
+#define TELEMETRY_INTERVAL_MS     15000  // 15 seconds in Moving Mode
 #define NETWORK_TIMEOUT_MS        30000  // 30 seconds
 #define AT_DEFAULT_TIMEOUT_MS     2000   // 2 seconds
+
+// Deep Sleep Testing Configuration (15 Min Parked Sleep / 2 Min Stationary Trigger)
+#define PARKED_SLEEP_INTERVAL_SEC (15 * 60)       // 15 minutes (900 seconds)
+#define STATIONARY_TIMEOUT_MS     (2 * 60 * 1000)  // 2 minutes stationary before deep sleep
 
 #endif // CONFIG_H

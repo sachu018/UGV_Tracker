@@ -26,6 +26,8 @@ private:
     TrackerState _state;
     uint32_t _stateTimer;
     uint32_t _lastUploadMs;
+    uint32_t _stationaryStartMs;
+    bool _isStationary;
 
     void setState(TrackerState newState);
     void handleState();
