@@ -41,10 +41,10 @@
 #define PARKED_SLEEP_INTERVAL_SEC (15 * 60)       // 15 minutes (900 seconds)
 #define STATIONARY_TIMEOUT_MS     (5 * 60 * 1000)  // 5 minutes active search before deep sleep
 
-// SMS Alert Notifications Configuration (Wakeup & Low Battery Alerts)
-#define ENABLE_SMS_ALERTS        true
-#define SMS_PHONE_NUMBER_1       "+916238227874"  // Primary recipient number
-#define SMS_PHONE_NUMBER_2       "+918137896946"  // Secondary recipient number
-#define SMS_PHONE_NUMBER_3       ""               // Optional 3rd recipient number
+// SMS Alert Notifications Configuration (Disabled)
+#define ENABLE_SMS_ALERTS        false
+#define SMS_PHONE_NUMBER_1       ""
+#define SMS_PHONE_NUMBER_2       ""
+#define SMS_PHONE_NUMBER_3       ""
 
 #endif // CONFIG_H
