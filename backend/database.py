@@ -34,14 +34,20 @@ def init_db():
     conn.commit()
     conn.close()
 
+from datetime import datetime, timezone, timedelta
+
+IST = timezone(timedelta(hours=5, minutes=30))
+
 def save_telemetry(data: dict):
     conn = sqlite3.connect(DB_FILE)
     cursor = conn.cursor()
+    now_ist = datetime.now(IST).strftime("%Y-%m-%d %H:%M:%S")
+    
     cursor.execute('''
         INSERT INTO telemetry (
             device_id, timestamp, latitude, longitude, altitude,
-            speed, heading, hdop, satellites, fix_mode, fix_valid, rssi, battery, state
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            speed, heading, hdop, satellites, fix_mode, fix_valid, rssi, battery, state, created_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ''', (
         data.get("device_id", "UGV-TRACKER-01"),
         data.get("timestamp", ""),
@@ -56,7 +62,8 @@ def save_telemetry(data: dict):
         1 if data.get("fix_valid", True) else 0,
         data.get("rssi", 0),
         data.get("battery", 4.2),
-        data.get("state", "TRACK")
+        data.get("state", "TRACK"),
+        now_ist
     ))
     conn.commit()
     conn.close()
