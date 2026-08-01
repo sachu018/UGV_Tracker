@@ -1,3 +1,6 @@
+#include "Tracker.h"
+#include "Config.h"
+
 static float readBatteryVoltage() {
     analogSetAttenuation(ADC_11db);
     uint32_t rawSum = 0;
