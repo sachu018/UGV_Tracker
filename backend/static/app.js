@@ -39,11 +39,47 @@ document.addEventListener("DOMContentLoaded", () => {
     updateLiveClock();
 });
 
+let lastKnownPacketTimeMs = null;
+let latestOnlineState = false;
+
 function updateLiveClock() {
     const now = new Date();
     const clockStr = now.toLocaleTimeString('en-US', { hour12: true, hour: '2-digit', minute: '2-digit', second: '2-digit' });
     const clockElem = document.getElementById("liveClockVal");
     if (clockElem) clockElem.innerText = clockStr;
+
+    // Ticking Schedule Timers strictly based on ESP32 last transmission timestamp!
+    if (lastKnownPacketTimeMs) {
+        const nowTime = now.getTime();
+        const elapsedSec = Math.max(0, Math.floor((nowTime - lastKnownPacketTimeMs) / 1000));
+        
+        const activeWindowMaxSec = 5 * 60; // 5 minutes active
+        const sleepIntervalSec = 15 * 60;   // 15 minutes sleep
+
+        const countdownElement = document.getElementById("countdownVal");
+        const activeTimerElement = document.getElementById("activeTimerVal");
+        const nextSleepElement = document.getElementById("nextSleepTimerVal");
+
+        if (latestOnlineState) {
+            const activeElapsed = Math.min(activeWindowMaxSec, elapsedSec);
+            const activeMins = Math.floor(activeElapsed / 60);
+            const activeSecs = activeElapsed % 60;
+            if (activeTimerElement) activeTimerElement.innerText = `Active ${activeMins}m ${activeSecs}s / 5m`;
+
+            const sleepInSec = Math.max(0, activeWindowMaxSec - elapsedSec);
+            const sleepMins = Math.floor(sleepInSec / 60);
+            const sleepSecs = sleepInSec % 60;
+            if (nextSleepElement) nextSleepElement.innerText = `Sleep in ${sleepMins}m ${sleepSecs}s`;
+            if (countdownElement) countdownElement.innerText = `Sleep in ${sleepMins}m ${sleepSecs}s`;
+        } else {
+            if (activeTimerElement) activeTimerElement.innerText = "In Deep Sleep";
+            const wakeInSec = Math.max(0, sleepIntervalSec - elapsedSec);
+            const wakeMins = Math.floor(wakeInSec / 60);
+            const wakeSecs = wakeInSec % 60;
+            if (nextSleepElement) nextSleepElement.innerText = `Wake in ${wakeMins}m ${wakeSecs}s`;
+            if (countdownElement) countdownElement.innerText = `Wake in ${wakeMins}m ${wakeSecs}s`;
+        }
+    }
 }
 
 function initMap() {
@@ -237,48 +273,18 @@ function updateDashboard(data) {
     document.getElementById("netStatusVal").innerText = "Registered (4G LTE)";
     document.getElementById("netStatusVal").className = "text-green";
 
-    // Datetime Clock & Sleep Schedule Timers
-    const countdownElement = document.getElementById("countdownVal");
-    const lastPacketElement = document.getElementById("lastPacketTimeVal");
-    const activeTimerElement = document.getElementById("activeTimerVal");
-    const nextSleepElement = document.getElementById("nextSleepTimerVal");
+    latestOnlineState = isOnline;
+    if (data.created_at_iso) {
+        lastKnownPacketTimeMs = new Date(data.created_at_iso).getTime();
+    } else if (data.created_at) {
+        lastKnownPacketTimeMs = new Date(data.created_at.replace(" ", "T") + "Z").getTime();
+    }
 
-    if (data.created_at) {
-        try {
-            const lastTime = new Date(data.created_at + " Z").getTime();
-            const nowTime = new Date().getTime();
-            const elapsedSec = Math.floor((nowTime - lastTime) / 1000);
-
-            // Format Last Packet Time
-            const packetDate = new Date(data.created_at + " Z");
-            if (lastPacketElement) {
-                lastPacketElement.innerText = packetDate.toLocaleTimeString('en-US', { hour12: true, hour: '2-digit', minute: '2-digit', second: '2-digit' });
-            }
-
-            const activeWindowMaxSec = 5 * 60; // 5 minutes active
-            const sleepIntervalSec = 15 * 60;   // 15 minutes sleep
-
-            if (isOnline) {
-                const activeElapsed = Math.min(activeWindowMaxSec, elapsedSec);
-                const activeMins = Math.floor(activeElapsed / 60);
-                const activeSecs = activeElapsed % 60;
-                if (activeTimerElement) activeTimerElement.innerText = `Active ${activeMins}m ${activeSecs}s / 5m`;
-
-                const sleepInSec = Math.max(0, activeWindowMaxSec - elapsedSec);
-                const sleepMins = Math.floor(sleepInSec / 60);
-                const sleepSecs = sleepInSec % 60;
-                if (nextSleepElement) nextSleepElement.innerText = `Sleep in ${sleepMins}m ${sleepSecs}s`;
-                if (countdownElement) countdownElement.innerText = `Sleep in ${sleepMins}m ${sleepSecs}s`;
-            } else {
-                if (activeTimerElement) activeTimerElement.innerText = "In Deep Sleep";
-                const wakeInSec = Math.max(0, sleepIntervalSec - elapsedSec);
-                const wakeMins = Math.floor(wakeInSec / 60);
-                const wakeSecs = wakeInSec % 60;
-                if (nextSleepElement) nextSleepElement.innerText = `Wake in ${wakeMins}m ${wakeSecs}s`;
-                if (countdownElement) countdownElement.innerText = `Wake in ${wakeMins}m ${wakeSecs}s`;
-            }
-        } catch(e) {
-            if (countdownElement) countdownElement.innerText = "Active Tracking";
+    // Format Last Packet Time
+    if (lastKnownPacketTimeMs) {
+        const lastPacketElement = document.getElementById("lastPacketTimeVal");
+        if (lastPacketElement) {
+            lastPacketElement.innerText = new Date(lastKnownPacketTimeMs).toLocaleTimeString('en-US', { hour12: true, hour: '2-digit', minute: '2-digit', second: '2-digit' });
         }
     }
 

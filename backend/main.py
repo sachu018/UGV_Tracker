@@ -89,6 +89,7 @@ async def get_latest():
     if latest:
         # Check timestamp freshness (Heartbeat timeout = 45 seconds)
         is_online = True
+        record_time = None
         try:
             created_at_str = latest.get("created_at")
             if created_at_str:
@@ -101,9 +102,13 @@ async def get_latest():
         except Exception:
             pass
 
-        # Copy data and apply offline overrides if hardware is off
+        # Copy data and apply ISO timestamp formatting
         latest_data = dict(latest)
         latest_data["online"] = is_online
+        latest_data["server_now_utc"] = datetime.now(timezone.utc).isoformat()
+        if record_time:
+            latest_data["created_at_iso"] = record_time.isoformat()
+
         if not is_online:
             latest_data["speed"] = 0.0
             latest_data["fix_valid"] = False
