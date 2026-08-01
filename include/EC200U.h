@@ -37,8 +37,9 @@ private:
     HardwareSerial* _serial;
     bool _isGpsEnabled;
 
-    // Helper parser for Quectel +QGPSLOC command response
+    // Helper parsers for Quectel +QGPSLOC and NMEA GGA responses
     bool parseQGPSLOC(const String &rawResponse, GPSData &gpsData);
+    bool parseGPGGA(const String &rawResponse, GPSData &gpsData);
     double convertNMEAToDecimal(const String &nmeaPos, char direction);
 };
 

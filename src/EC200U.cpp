@@ -132,10 +132,12 @@ int EC200U::getSignalStrength() {
 }
 
 bool EC200U::enableGPS() {
-    LOG_INFO("Enabling EC200U GNSS/GPS (Multi-Constellation: GPS+GLONASS+BeiDou)...");
-    sendAT("AT+CFUN=1", 1000);                   // Force 4G RF modem engine to full power (400-500mA)
-    sendAT("AT+QGPSCFG=\"gnssconfig\",1", 1000); // Enable all satellite constellations
-    String resp = sendAT("AT+QGPS=1", 2000);
+    LOG_INFO("Enabling EC200U GNSS/GPS (Multi-Constellation)...");
+    sendAT("AT+CFUN=1", 1000);                      // 1. Force 4G RF modem engine to full power (400-500mA)
+    sendAT("AT+QGPSEND", 1000);                     // 2. Stop any stuck previous GNSS session
+    sendAT("AT+QGPSCFG=\"gnssconfig\",1", 1000);    // 3. Enable GPS + GLONASS + BeiDou + Galileo
+    sendAT("AT+QGPSCFG=\"outport\",\"none\"", 1000); // 4. Direct NMEA AT queries
+    String resp = sendAT("AT+QGPS=1", 2000);        // 5. Start GNSS engine
     
     // CME ERROR 504 means GNSS is already turned on
     if (resp.indexOf("OK") != -1 || resp.indexOf("504") != -1) {
@@ -165,9 +167,14 @@ bool EC200U::getLocation(GPSData &gpsData) {
     }
 
     String resp = sendAT("AT+QGPSLOC=0", 2000);
-    // Example output: +QGPSLOC: 084803.00,19.0760,72.8777,1.0,15.2,3,0.0,0.0,0.0,230726,08
     if (resp.indexOf("+QGPSLOC:") != -1) {
         return parseQGPSLOC(resp, gpsData);
+    }
+    
+    // Fallback NMEA Query: If AT+QGPSLOC=0 returns 516 (not fixed yet), query raw NMEA GGA sentence!
+    String nmeaResp = sendAT("AT+QGPSGNMEA=\"GGA\"", 2000);
+    if (nmeaResp.indexOf("$G") != -1) {
+        return parseGPGGA(nmeaResp, gpsData);
     }
     
     gpsData.valid = false;
@@ -545,4 +552,52 @@ bool EC200U::sendSMS(const String &phoneNumber, const String &message) {
     LOG_ERROR("SMS Transmission Failed for " + phoneNumber);
     while (_serial->available()) _serial->read();
     return false;
+}
+
+bool EC200U::parseGPGGA(const String &rawResponse, GPSData &gpsData) {
+    int gIdx = rawResponse.indexOf("$G");
+    if (gIdx == -1) {
+        gpsData.valid = false;
+        return false;
+    }
+
+    String dataStr = rawResponse.substring(gIdx);
+    dataStr.trim();
+
+    int tokensCount = 0;
+    String tokens[15];
+    int start = 0;
+    for (int i = 0; i < dataStr.length(); i++) {
+        if (dataStr.charAt(i) == ',' || dataStr.charAt(i) == '\r' || dataStr.charAt(i) == '\n') {
+            if (tokensCount < 15) {
+                tokens[tokensCount++] = dataStr.substring(start, i);
+            }
+            start = i + 1;
+            if (dataStr.charAt(i) == '\r' || dataStr.charAt(i) == '\n') break;
+        }
+    }
+
+    if (tokensCount < 10) {
+        gpsData.valid = false;
+        return false;
+    }
+
+    String latStr = tokens[2];
+    char latDir = tokens[3].length() > 0 ? tokens[3].charAt(0) : 'N';
+    String lonStr = tokens[4];
+    char lonDir = tokens[5].length() > 0 ? tokens[5].charAt(0) : 'E';
+    int fixQuality = tokens[6].toInt();
+    int sats = tokens[7].toInt();
+    float hdop = tokens[8].toFloat();
+    float alt = tokens[9].toFloat();
+
+    gpsData.latitude = convertNMEAToDecimal(latStr, latDir);
+    gpsData.longitude = convertNMEAToDecimal(lonStr, lonDir);
+    gpsData.satellites = sats;
+    gpsData.hdop = hdop;
+    gpsData.altitude = alt;
+    gpsData.fixMode = fixQuality >= 1 ? (fixQuality == 2 ? 4 : 3) : 0;
+    gpsData.valid = (fixQuality >= 1 || (gpsData.latitude != 0.0 && gpsData.longitude != 0.0) || sats >= 1);
+
+    return gpsData.valid;
 }
