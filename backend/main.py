@@ -131,13 +131,27 @@ async def reset_history():
 
 from fastapi.responses import Response
 
+from datetime import datetime, timezone, timedelta
+
+IST = timezone(timedelta(hours=5, minutes=30))
+
 # 6. Dedicated CSV Export Endpoint (Direct Database Download)
 @app.get("/api/v1/telemetry/export-csv")
 async def export_csv():
     history = database.get_history_telemetry(2000)
     csv_lines = ["id,created_at_ist,latitude,longitude,altitude,speed,heading,hdop,satellites,fix_mode,rssi,battery"]
     for row in history:
-        csv_lines.append(f"{row.get('id','')},{row.get('created_at','')},{row.get('latitude',0.0)},{row.get('longitude',0.0)},{row.get('altitude',0.0)},{row.get('speed',0.0)},{row.get('heading',0.0)},{row.get('hdop',0.0)},{row.get('satellites',0)},{row.get('fix_mode',0)},{row.get('rssi',0)},{row.get('battery',0.0)}")
+        created_at_str = row.get("created_at", "")
+        ist_time_str = created_at_str
+        try:
+            if created_at_str:
+                utc_dt = datetime.strptime(created_at_str, "%Y-%m-%d %H:%M:%S").replace(tzinfo=timezone.utc)
+                ist_dt = utc_dt.astimezone(IST)
+                ist_time_str = ist_dt.strftime("%Y-%m-%d %H:%M:%S")
+        except Exception:
+            pass
+
+        csv_lines.append(f"{row.get('id','')},{ist_time_str},{row.get('latitude',0.0)},{row.get('longitude',0.0)},{row.get('altitude',0.0)},{row.get('speed',0.0)},{row.get('heading',0.0)},{row.get('hdop',0.0)},{row.get('satellites',0)},{row.get('fix_mode',0)},{row.get('rssi',0)},{row.get('battery',0.0)}")
     csv_data = "\n".join(csv_lines)
     return Response(
         content=csv_data,

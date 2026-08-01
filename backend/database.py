@@ -34,14 +34,12 @@ def init_db():
     conn.commit()
     conn.close()
 
-from datetime import datetime, timezone, timedelta
-
-IST = timezone(timedelta(hours=5, minutes=30))
+from datetime import datetime, timezone
 
 def save_telemetry(data: dict):
     conn = sqlite3.connect(DB_FILE)
     cursor = conn.cursor()
-    now_ist = datetime.now(IST).strftime("%Y-%m-%d %H:%M:%S")
+    now_utc = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
     
     cursor.execute('''
         INSERT INTO telemetry (
@@ -63,7 +61,7 @@ def save_telemetry(data: dict):
         data.get("rssi", 0),
         data.get("battery", 4.2),
         data.get("state", "TRACK"),
-        now_ist
+        now_utc
     ))
     conn.commit()
     conn.close()
