@@ -20,10 +20,16 @@
 // Cellular Network Configuration
 #define CELLULAR_APN        "airtelgprs.com" // Replace with your SIM card APN
 
-// Vendor Telemetry Backend Server Configuration
-#define SERVER_URL          "https://tracker.reving.in/api/v1/telemetry/update"
+// Dual Telemetry Backend Server URLs (Vendor + Custom Render Cloud)
+#define VENDOR_SERVER_URL   "https://tracker.reving.in/api/v1/telemetry/update"
+#define RENDER_SERVER_URL   "https://ugv-tracker-server.onrender.com/api/v1/telemetry/update"
+#define SERVER_URL          VENDOR_SERVER_URL
 #define DEVICE_ID           "UGV-TRACKER-01"
 #define DEVICE_API_KEY      "0ddfccf1d3fca880135268e79197564a3fabc788f2a447c2"
+
+// Battery Voltage Measurement (GPIO 34 ADC Voltage Divider: 100k + 100k)
+#define BATTERY_ADC_PIN     34
+#define BATTERY_LOW_CUTOFF  3.30f  // Critical Low Battery Voltage threshold
 
 // Timing & Retries
 #define GPS_POLL_INTERVAL_MS      2000   // 2 seconds

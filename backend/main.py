@@ -124,6 +124,22 @@ async def reset_history():
     database.clear_telemetry()
     return {"status": "success", "message": "Telemetry history cleared"}
 
+from fastapi.responses import Response
+
+# 6. Dedicated CSV Export Endpoint (Direct Database Download)
+@app.get("/api/v1/telemetry/export-csv")
+async def export_csv():
+    history = database.get_history_telemetry(1000)
+    csv_lines = ["id,created_at,latitude,longitude,altitude,speed,heading,hdop,satellites,fix_mode,rssi,battery"]
+    for row in reversed(history):
+        csv_lines.append(f"{row.get('id','')},{row.get('created_at','')},{row.get('latitude',0.0)},{row.get('longitude',0.0)},{row.get('altitude',0.0)},{row.get('speed',0.0)},{row.get('heading',0.0)},{row.get('hdop',0.0)},{row.get('satellites',0)},{row.get('fix_mode',0)},{row.get('rssi',0)},{row.get('battery',0.0)}")
+    csv_data = "\n".join(csv_lines)
+    return Response(
+        content=csv_data,
+        media_type="text/csv",
+        headers={"Content-Disposition": "attachment; filename=UGV_Telemetry_Logs.csv"}
+    )
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)

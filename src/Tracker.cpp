@@ -1,5 +1,15 @@
-#include "Tracker.h"
-#include "Config.h"
+static float readBatteryVoltage() {
+    analogSetAttenuation(ADC_11db);
+    uint32_t rawSum = 0;
+    for (int i = 0; i < 10; i++) {
+        rawSum += analogRead(BATTERY_ADC_PIN);
+        delay(2);
+    }
+    float rawAvg = (float)rawSum / 10.0f;
+    float pinVoltage = (rawAvg / 4095.0f) * 3.3f;
+    float batteryVoltage = pinVoltage * 2.0f; // Voltage divider ratio 2.0 (100k + 100k)
+    return batteryVoltage;
+}
 
 Tracker::Tracker() 
     : _gps(_modem), 
@@ -12,10 +22,17 @@ Tracker::Tracker()
       _isStationary(false) {}
 
 bool Tracker::begin() {
-    LOG_INFO("=========================================");
-    LOG_INFO(" Starting UGV Standalone GPS Tracker ");
-    LOG_INFO(" (Deep Sleep Power Saver: 15-Min Test Mode)");
-    LOG_INFO("=========================================");
+    float bootBat = readBatteryVoltage();
+    int bootRssi = _network.getSignalStrength();
+
+    LOG_INFO("=======================================================");
+    LOG_INFO(" [BOOT SNAPSHOT] System Initialization & Wakeup Event ");
+    LOG_INFO("=======================================================");
+    LOG_INFO(" - Battery Voltage : " + String(bootBat, 2) + " V (GPIO 34 ADC)");
+    LOG_INFO(" - SIM / Cellular  : Airtel 4G (Signal: " + String(bootRssi) + " CSQ)");
+    LOG_INFO(" - GNSS Module     : Active Multi-Constellation");
+    LOG_INFO(" - Power Saver Mode: Motion-Aware Deep Sleep Active");
+    LOG_INFO("=======================================================");
 
     esp_sleep_wakeup_cause_t wakeup_reason = esp_sleep_get_wakeup_cause();
     if (wakeup_reason == ESP_SLEEP_WAKEUP_TIMER) {
@@ -141,31 +158,41 @@ void Tracker::handleState() {
             tData.deviceId = DEVICE_ID;
             tData.gps = _gps.getData();
             tData.signalRssi = _network.getSignalStrength();
-            tData.batteryVoltage = 4.2; // Monitored battery voltage
+            tData.batteryVoltage = readBatteryVoltage(); // Live GPIO 34 ADC Battery Reading
             tData.state = _state;
 
-            int httpCode = 0;
-            String respBody;
-            
-            String url = String(SERVER_URL) +
-                         "?field1=" + String(tData.gps.latitude, 6) +
-                         "&field2=" + String(tData.gps.longitude, 6) +
-                         "&field3=" + String(tData.gps.speed, 2) +
-                         "&field4=" + String(tData.gps.satellites) +
-                         "&field5=" + String(tData.gps.altitude, 1) +
-                         "&field6=" + String(tData.signalRssi) +
-                         "&field7=" + String(tData.batteryVoltage, 2) +
-                         "&field8=" + String(tData.gps.fixMode) +
-                         "&device_id=" + tData.deviceId +
-                         "&key=" + String(DEVICE_API_KEY);
+            // Emergency Low Battery Death Alert
+            if (tData.batteryVoltage < BATTERY_LOW_CUTOFF) {
+                LOG_ERROR("[CRITICAL BATTERY] Voltage dropped to " + String(tData.batteryVoltage, 2) + "V! Transmitting Death Alert Packet...");
+                tData.gps.fixMode = 9; // FixMode 9 = Emergency Low Battery Death Flag
+            }
 
-            LOG_INFO("Uploading Telemetry to Vendor Backend...");
-            bool success = _modem.getHTTP(url, httpCode, respBody);
+            int httpCode1 = 0, httpCode2 = 0;
+            String respBody1, respBody2;
             
-            if (success) {
-                LOG_INFO("Telemetry Upload SUCCESSFUL!");
+            String queryParams = "?field1=" + String(tData.gps.latitude, 6) +
+                                 "&field2=" + String(tData.gps.longitude, 6) +
+                                 "&field3=" + String(tData.gps.speed, 2) +
+                                 "&field4=" + String(tData.gps.satellites) +
+                                 "&field5=" + String(tData.gps.altitude, 1) +
+                                 "&field6=" + String(tData.signalRssi) +
+                                 "&field7=" + String(tData.batteryVoltage, 2) +
+                                 "&field8=" + String(tData.gps.fixMode) +
+                                 "&device_id=" + tData.deviceId +
+                                 "&key=" + String(DEVICE_API_KEY);
+
+            // DUAL UPLOAD: 1. Vendor Server
+            LOG_INFO("Dual Upload [1/2]: Vendor Backend (" + String(VENDOR_SERVER_URL) + ")");
+            bool success1 = _modem.getHTTP(String(VENDOR_SERVER_URL) + queryParams, httpCode1, respBody1);
+
+            // DUAL UPLOAD: 2. Custom Render Cloud Server
+            LOG_INFO("Dual Upload [2/2]: Custom Render Cloud (" + String(RENDER_SERVER_URL) + ")");
+            bool success2 = _modem.getHTTP(String(RENDER_SERVER_URL) + queryParams, httpCode2, respBody2);
+            
+            if (success1 && success2) {
+                LOG_INFO("DUAL TELEMETRY UPLOAD SUCCESSFUL TO BOTH SERVERS!");
             } else {
-                LOG_ERROR("Upload FAILED (Code: " + String(httpCode) + ")");
+                LOG_ERROR("Dual Upload Result -> Vendor: " + String(httpCode1) + " | Render: " + String(httpCode2));
             }
 
             setState(TrackerState::TRACK);
@@ -177,45 +204,41 @@ void Tracker::handleState() {
             LOG_INFO(" Uploading Final Parked Status Packet ");
             LOG_INFO("=========================================");
 
-            // Send final stationary packet before sleep
             TelemetryData tData;
             tData.deviceId = DEVICE_ID;
             tData.gps = _gps.getData();
             tData.gps.speed = 0.0;
             tData.signalRssi = _network.getSignalStrength();
-            tData.batteryVoltage = 4.2;
+            tData.batteryVoltage = readBatteryVoltage();
             tData.state = _state;
 
-            int httpCode = 0;
-            String respBody;
-            String url = String(SERVER_URL) +
-                         "?field1=" + String(tData.gps.latitude, 6) +
-                         "&field2=" + String(tData.gps.longitude, 6) +
-                         "&field3=0.00" +
-                         "&field4=" + String(tData.gps.satellites) +
-                         "&field5=" + String(tData.gps.altitude, 1) +
-                         "&field6=" + String(tData.signalRssi) +
-                         "&field7=" + String(tData.batteryVoltage, 2) +
-                         "&field8=" + String(tData.gps.fixMode) +
-                         "&device_id=" + tData.deviceId +
-                         "&key=" + String(DEVICE_API_KEY);
+            int httpCode1 = 0, httpCode2 = 0;
+            String respBody1, respBody2;
+            String queryParams = "?field1=" + String(tData.gps.latitude, 6) +
+                                 "&field2=" + String(tData.gps.longitude, 6) +
+                                 "&field3=0.00" +
+                                 "&field4=" + String(tData.gps.satellites) +
+                                 "&field5=" + String(tData.gps.altitude, 1) +
+                                 "&field6=" + String(tData.signalRssi) +
+                                 "&field7=" + String(tData.batteryVoltage, 2) +
+                                 "&field8=" + String(tData.gps.fixMode) +
+                                 "&device_id=" + tData.deviceId +
+                                 "&key=" + String(DEVICE_API_KEY);
 
-            _modem.getHTTP(url, httpCode, respBody);
+            _modem.getHTTP(String(VENDOR_SERVER_URL) + queryParams, httpCode1, respBody1);
+            _modem.getHTTP(String(RENDER_SERVER_URL) + queryParams, httpCode2, respBody2);
 
             LOG_INFO("=========================================");
             LOG_INFO(" ENTIRE SYSTEM ENTERING DEEP SLEEP NOW ");
             LOG_INFO(" Duration: 15 Minutes (900 Seconds) ");
             LOG_INFO(" ESP32 Power: ~10 uA | Modem: Low-Power ");
+            LOG_INFO(" Battery Voltage: " + String(tData.batteryVoltage, 2) + "V ");
             LOG_INFO("=========================================");
 
-            // 1. Put Modem into Low Power Mode
             _modem.setLowPowerMode(true);
             delay(500);
 
-            // 2. Configure ESP32 Deep Sleep Timer Wakeup (15 minutes = 900,000,000 us)
             esp_sleep_enable_timer_wakeup(PARKED_SLEEP_INTERVAL_SEC * 1000000ULL);
-            
-            // 3. Start ESP32 Deep Sleep
             esp_deep_sleep_start();
             break;
         }

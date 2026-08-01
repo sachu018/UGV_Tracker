@@ -203,9 +203,18 @@ function updateDashboard(data) {
         return;
     }
 
-    // 2. Battery & Signal CSQ Status
+    // 2. Battery & Signal CSQ Status (GPIO 34 ADC Voltage Divider)
     const bat = data.battery || 4.2;
-    document.getElementById("batteryVal").innerText = `${bat.toFixed(1)}V`;
+    const batElement = document.getElementById("batteryVal");
+    batElement.innerText = `${bat.toFixed(2)}V`;
+    if (bat < 3.3) {
+        batElement.style.color = "#EF4444";
+        batElement.innerText = `${bat.toFixed(2)}V (CRITICAL LOW)`;
+    } else if (bat < 3.6) {
+        batElement.style.color = "#F59E0B";
+    } else {
+        batElement.style.color = "#10B981";
+    }
     
     const rssi = data.rssi || 0;
     let signalText = `${rssi} CSQ`;
@@ -219,6 +228,30 @@ function updateDashboard(data) {
     document.getElementById("netStatusVal").innerText = "Registered (4G LTE)";
     document.getElementById("netStatusVal").className = "text-green";
 
+    // Next Packet Countdown Timer
+    const countdownElement = document.getElementById("countdownVal");
+    if (data.created_at) {
+        try {
+            const lastTime = new Date(data.created_at + " Z").getTime();
+            const nowTime = new Date().getTime();
+            const elapsedSec = Math.floor((nowTime - lastTime) / 1000);
+            const parkedIntervalSec = 15 * 60; // 15 minutes sleep
+            const remainingSec = Math.max(0, parkedIntervalSec - elapsedSec);
+
+            if (remainingSec > 0 && remainingSec < 900) {
+                const mins = Math.floor(remainingSec / 60);
+                const secs = remainingSec % 60;
+                countdownElement.innerText = `In ${mins}m ${secs}s`;
+                countdownElement.className = "text-green";
+            } else {
+                countdownElement.innerText = "Active Tracking";
+                countdownElement.className = "text-green";
+            }
+        } catch(e) {
+            countdownElement.innerText = "Active Tracking";
+        }
+    }
+
     // 3. GNSS / GPS Hardware Status
     const sats = data.satellites || 0;
     const hdop = data.hdop || 1.0;
@@ -231,7 +264,10 @@ function updateDashboard(data) {
 
     const isQualityFix = (fixMode >= 3 && sats >= MIN_REQUIRED_SATELLITES && hdop <= MAX_ALLOWED_HDOP);
 
-    if (fixMode === 4) {
+    if (fixMode === 9) { // FixMode 9 = Emergency Low Battery Death Flag
+        fixBadge.innerText = "BATTERY CRITICAL SHUTDOWN";
+        fixBadge.style.color = "#EF4444";
+    } else if (fixMode === 4) {
         fixBadge.innerText = "DGPS Sub-Meter";
         fixBadge.style.color = "#0284C7";
     } else if (isQualityFix) {
@@ -310,26 +346,9 @@ function updateDashboard(data) {
     }
 }
 
-// Export Telemetry Logs to CSV File
+// Export Telemetry Logs to CSV File (Direct Database Download)
 function exportCSV() {
-    if (!cachedHistoryData || cachedHistoryData.length === 0) {
-        alert("No telemetry logs available to export.");
-        return;
-    }
-
-    let csvContent = "data:text/csv;charset=utf-8,ID,Timestamp,Latitude,Longitude,Altitude,Speed,Heading,HDOP,Satellites,FixMode,RSSI,Battery\n";
-
-    cachedHistoryData.forEach(row => {
-        csvContent += `${row.id},${row.created_at || ''},${row.latitude},${row.longitude},${row.altitude},${row.speed},${row.heading},${row.hdop},${row.satellites},${row.fix_mode},${row.rssi},${row.battery}\n`;
-    });
-
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `UGV_Telemetry_Logs_${new Date().toISOString().slice(0,10)}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    window.location.href = '/api/v1/telemetry/export-csv';
 }
 
 // Dedicated History Route Map Modal Functions
