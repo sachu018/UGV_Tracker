@@ -43,7 +43,7 @@
 
 // SMS Alert Notifications Configuration (Wakeup & Low Battery Alerts)
 #define ENABLE_SMS_ALERTS        true
-#define SMS_PHONE_NUMBER_1       "+919876543210"  // Replace with primary recipient number
+#define SMS_PHONE_NUMBER_1       "+916238227874"  // Primary recipient number
 #define SMS_PHONE_NUMBER_2       ""               // Optional 2nd recipient number
 #define SMS_PHONE_NUMBER_3       ""               // Optional 3rd recipient number
 
