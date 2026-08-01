@@ -133,6 +133,7 @@ int EC200U::getSignalStrength() {
 
 bool EC200U::enableGPS() {
     LOG_INFO("Enabling EC200U GNSS/GPS (Multi-Constellation: GPS+GLONASS+BeiDou)...");
+    sendAT("AT+CFUN=1", 1000);                   // Force 4G RF modem engine to full power (400-500mA)
     sendAT("AT+QGPSCFG=\"gnssconfig\",1", 1000); // Enable all satellite constellations
     String resp = sendAT("AT+QGPS=1", 2000);
     
@@ -243,11 +244,6 @@ bool EC200U::parseQGPSLOC(const String &rawResponse, GPSData &gpsData) {
 
     int fixMode = fixStr.toInt();
     gpsData.fixMode = fixMode;
-    if (fixMode >= 2) {
-        gpsData.valid = true;
-    } else {
-        gpsData.valid = false;
-    }
 
     // Check directions in lat/lon strings if present
     char latDir = 'N';
@@ -264,13 +260,13 @@ bool EC200U::parseQGPSLOC(const String &rawResponse, GPSData &gpsData) {
     gpsData.altitude   = altStr.toFloat();
     gpsData.heading    = cogStr.toFloat();
     gpsData.satellites = satStr.toInt();
+    gpsData.speed      = spkStr.toFloat();
 
-    // Noise Filter: If reported speed is under 2.0 km/h or HDOP is high (> 2.5), treat speed as 0.0 km/h
-    float rawSpeed = spkStr.toFloat();
-    if (rawSpeed < 2.0f || gpsData.hdop > 2.5f || gpsData.satellites < 5) {
-        gpsData.speed = 0.0f;
+    // Sensitive Fix Acceptance: Accept ANY fix level (2D, 3D, DGPS) or any non-zero coordinates/satellites
+    if (fixMode >= 1 || (gpsData.latitude != 0.0 && gpsData.longitude != 0.0) || gpsData.satellites >= 1) {
+        gpsData.valid = true;
     } else {
-        gpsData.speed = rawSpeed;
+        gpsData.valid = false;
     }
 
     // Format UTC timestamp string: YYYY-MM-DD HH:MM:SS
