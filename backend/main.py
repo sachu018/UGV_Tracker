@@ -93,22 +93,68 @@ def parse_db_datetime(date_str: str) -> datetime:
             pass
     return datetime.now(timezone.utc)
 
-# 3. Latest Telemetry Endpoint (Web Dashboard Polling with 45s Heartbeat Check)
+# 3. Latest Telemetry Endpoint (Web Dashboard Polling & Backend Schedule Calculation)
 @app.get("/api/v1/telemetry/latest")
 async def get_latest():
     latest = database.get_latest_telemetry()
     if latest:
+        device_id = latest.get("device_id", "UGV-TRACKER-01")
+        sess_info = database.get_session_info(device_id)
+
+        now_utc = datetime.now(timezone.utc)
         created_at_str = latest.get("created_at")
-        record_time = parse_db_datetime(created_at_str)
-        now_time = datetime.now(timezone.utc)
-        age_seconds = (now_time - record_time).total_seconds()
+        last_packet_dt = parse_db_datetime(created_at_str)
         
-        is_online = (age_seconds <= 45)
+        session_start_dt = last_packet_dt
+        if sess_info and sess_info.get("session_start_utc"):
+            session_start_dt = parse_db_datetime(sess_info.get("session_start_utc"))
+
+        # Elapsed time since ESP32 turned ON / started sending data
+        elapsed_since_boot = max(0, int((now_utc - session_start_dt).total_seconds()))
+        elapsed_since_last_packet = max(0, int((now_utc - last_packet_dt).total_seconds()))
+
+        # Hardware is online if last packet arrived within 45 seconds
+        is_online = (elapsed_since_last_packet <= 45)
+
+        ACTIVE_WINDOW_SEC = 300  # 5 Minutes active tracking
+        SLEEP_WINDOW_SEC = 900   # 15 Minutes deep sleep
+        TOTAL_CYCLE_SEC = ACTIVE_WINDOW_SEC + SLEEP_WINDOW_SEC
+
+        if elapsed_since_boot < ACTIVE_WINDOW_SEC:
+            # System is in 5-Minute Active Window
+            mode = "ACTIVE_TRACKING"
+            active_elapsed_sec = elapsed_since_boot
+            active_remaining_sec = ACTIVE_WINDOW_SEC - elapsed_since_boot
+            sleep_remaining_sec = active_remaining_sec
+            next_wakeup_dt = session_start_dt + timedelta(seconds=TOTAL_CYCLE_SEC)
+        else:
+            # System is in 15-Minute Deep Sleep
+            mode = "PARKED_SLEEP"
+            active_elapsed_sec = ACTIVE_WINDOW_SEC
+            active_remaining_sec = 0
+            sleep_elapsed_sec = elapsed_since_boot - ACTIVE_WINDOW_SEC
+            sleep_remaining_sec = max(0, SLEEP_WINDOW_SEC - sleep_elapsed_sec)
+            next_wakeup_dt = session_start_dt + timedelta(seconds=TOTAL_CYCLE_SEC)
+
+        # Convert timestamps to IST (Indian Standard Time UTC+5:30)
+        last_packet_ist = last_packet_dt.astimezone(IST).strftime("%I:%M:%S %p")
+        last_wakeup_ist = session_start_dt.astimezone(IST).strftime("%I:%M:%S %p")
+        next_wakeup_ist = next_wakeup_dt.astimezone(IST).strftime("%I:%M:%S %p")
 
         latest_data = dict(latest)
         latest_data["online"] = is_online
-        latest_data["server_now_utc"] = now_time.isoformat()
-        latest_data["created_at_iso"] = record_time.isoformat()
+        latest_data["server_now_utc"] = now_utc.isoformat()
+        latest_data["created_at_iso"] = last_packet_dt.isoformat()
+        latest_data["schedule"] = {
+            "mode": mode,
+            "elapsed_since_boot_sec": elapsed_since_boot,
+            "active_elapsed_sec": active_elapsed_sec,
+            "active_remaining_sec": active_remaining_sec,
+            "sleep_remaining_sec": sleep_remaining_sec,
+            "last_packet_time_ist": last_packet_ist,
+            "last_wakeup_time_ist": last_wakeup_ist,
+            "next_wakeup_time_ist": next_wakeup_ist
+        }
 
         if not is_online:
             latest_data["speed"] = 0.0

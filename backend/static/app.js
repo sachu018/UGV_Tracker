@@ -39,8 +39,7 @@ document.addEventListener("DOMContentLoaded", () => {
     updateLiveClock();
 });
 
-let lastKnownPacketTimeMs = null;
-let latestOnlineState = false;
+let latestSchedule = null;
 
 function updateLiveClock() {
     const now = new Date();
@@ -48,37 +47,32 @@ function updateLiveClock() {
     const clockElem = document.getElementById("liveClockVal");
     if (clockElem) clockElem.innerText = clockStr;
 
-    // Ticking Schedule Timers strictly based on ESP32 last transmission timestamp!
-    const refPacketTime = lastKnownPacketTimeMs || Date.now();
-    const nowTime = now.getTime();
-    const elapsedSec = Math.max(0, Math.floor((nowTime - refPacketTime) / 1000));
-        
-        const activeWindowMaxSec = 5 * 60; // 5 minutes active
-        const sleepIntervalSec = 15 * 60;   // 15 minutes sleep
-
+    // Direct rendering of backend-computed schedule parameters!
+    if (latestSchedule) {
         const countdownElement = document.getElementById("countdownVal");
         const activeTimerElement = document.getElementById("activeTimerVal");
         const nextSleepElement = document.getElementById("nextSleepTimerVal");
 
-        if (latestOnlineState) {
-            const activeElapsed = Math.min(activeWindowMaxSec, elapsedSec);
-            const activeMins = Math.floor(activeElapsed / 60);
-            const activeSecs = activeElapsed % 60;
-            if (activeTimerElement) activeTimerElement.innerText = `Active ${activeMins}m ${activeSecs}s / 5m`;
+        if (latestSchedule.mode === "ACTIVE_TRACKING") {
+            const actRem = Math.max(0, latestSchedule.active_remaining_sec);
+            const actElapsed = Math.min(300, 300 - actRem);
+            const actMins = Math.floor(actElapsed / 60);
+            const actSecs = actElapsed % 60;
+            if (activeTimerElement) activeTimerElement.innerText = `Active ${actMins}m ${actSecs}s / 5m`;
 
-            const sleepInSec = Math.max(0, activeWindowMaxSec - elapsedSec);
-            const sleepMins = Math.floor(sleepInSec / 60);
-            const sleepSecs = sleepInSec % 60;
+            const sleepMins = Math.floor(actRem / 60);
+            const sleepSecs = actRem % 60;
             if (nextSleepElement) nextSleepElement.innerText = `Sleep in ${sleepMins}m ${sleepSecs}s`;
             if (countdownElement) countdownElement.innerText = `Sleep in ${sleepMins}m ${sleepSecs}s`;
         } else {
             if (activeTimerElement) activeTimerElement.innerText = "In Deep Sleep";
-            const wakeInSec = Math.max(0, sleepIntervalSec - elapsedSec);
-            const wakeMins = Math.floor(wakeInSec / 60);
-            const wakeSecs = wakeInSec % 60;
+            const slpRem = Math.max(0, latestSchedule.sleep_remaining_sec);
+            const wakeMins = Math.floor(slpRem / 60);
+            const wakeSecs = slpRem % 60;
             if (nextSleepElement) nextSleepElement.innerText = `Wake in ${wakeMins}m ${wakeSecs}s`;
             if (countdownElement) countdownElement.innerText = `Wake in ${wakeMins}m ${wakeSecs}s`;
         }
+    }
 }
 
 function initMap() {
@@ -234,12 +228,13 @@ async function fetchLatestTelemetry() {
 
 function updateDashboard(data) {
     const isOnline = (data.online !== false);
-    latestOnlineState = isOnline;
 
-    if (data.created_at_iso) {
-        lastKnownPacketTimeMs = new Date(data.created_at_iso).getTime();
-    } else if (data.created_at) {
-        lastKnownPacketTimeMs = new Date(data.created_at.replace(" ", "T") + "Z").getTime();
+    if (data.schedule) {
+        latestSchedule = data.schedule;
+        if (data.schedule.last_packet_time_ist) {
+            const lastPacketElement = document.getElementById("lastPacketTimeVal");
+            if (lastPacketElement) lastPacketElement.innerText = data.schedule.last_packet_time_ist;
+        }
     }
 
     // 1. Prominent System Power & Online Status
@@ -249,14 +244,6 @@ function updateDashboard(data) {
         document.getElementById("powerText").innerText = "SYSTEM POWERED & ONLINE";
     } else {
         setSystemOffline();
-    }
-
-    // Format Last Packet Time
-    if (lastKnownPacketTimeMs) {
-        const lastPacketElement = document.getElementById("lastPacketTimeVal");
-        if (lastPacketElement) {
-            lastPacketElement.innerText = new Date(lastKnownPacketTimeMs).toLocaleTimeString('en-US', { hour12: true, hour: '2-digit', minute: '2-digit', second: '2-digit' });
-        }
     }  // 2. Battery & Signal CSQ Status (GPIO 34 ADC Voltage Divider)
     const bat = (data.battery !== undefined && data.battery !== null) ? data.battery : 4.2;
     const batElement = document.getElementById("batteryVal");
