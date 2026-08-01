@@ -238,8 +238,8 @@ body {
 /* Speed & Distance Box */
 .speed-distance-row {
     display: flex;
-    align-items: center;
-    justify-content: space-between;
+    flex-direction: column;
+    gap: 12px;
     background: var(--card-bg);
     border: 1px solid var(--panel-border);
     border-radius: 14px;
@@ -266,7 +266,7 @@ body {
 }
 
 .distance-box {
-    text-align: right;
+    text-align: left;
 }
 
 .dist-label {
@@ -325,12 +325,14 @@ body {
 
 .titem {
     display: flex;
-    justify-content: space-between;
-    align-items: center;
-    background: rgba(241, 245, 249, 0.5);
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 3px;
+    background: rgba(241, 245, 249, 0.6);
     padding: 8px 12px;
     border-radius: 8px;
-    border: 1px solid rgba(226, 232, 240, 0.6);
+    border: 1px solid rgba(226, 232, 240, 0.8);
+    width: 100%;
 }
 
 .titem small {
@@ -343,8 +345,9 @@ body {
 
 .titem strong {
     font-size: 13px;
-    font-weight: 700;
+    font-weight: 800;
     color: var(--text-main);
+    word-break: break-word;
 }
 
 .text-green { color: var(--accent) !important; }
@@ -366,15 +369,17 @@ body {
     background: var(--card-bg);
     border: 1px solid var(--panel-border);
     border-radius: 12px;
-    padding: 10px 14px;
+    padding: 12px 14px;
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: 8px;
 }
 
 .loc-item {
     display: flex;
-    justify-content: space-between;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
     font-size: 11px;
 }
 
