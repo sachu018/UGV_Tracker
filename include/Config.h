@@ -37,9 +37,9 @@
 #define NETWORK_TIMEOUT_MS        30000  // 30 seconds
 #define AT_DEFAULT_TIMEOUT_MS     2000   // 2 seconds
 
-// Deep Sleep Testing Configuration (15 Min Parked Sleep / 2 Min Stationary Trigger)
+// Deep Sleep Testing Configuration (15 Min Parked Sleep / 5 Min Active Trigger)
 #define PARKED_SLEEP_INTERVAL_SEC (15 * 60)       // 15 minutes (900 seconds)
-#define STATIONARY_TIMEOUT_MS     (2 * 60 * 1000)  // 2 minutes stationary before deep sleep
+#define STATIONARY_TIMEOUT_MS     (5 * 60 * 1000)  // 5 minutes active search before deep sleep
 
 // SMS Alert Notifications Configuration (Wakeup & Low Battery Alerts)
 #define ENABLE_SMS_ALERTS        true

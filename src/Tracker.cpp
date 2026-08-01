@@ -58,7 +58,7 @@ bool Tracker::begin() {
     esp_sleep_wakeup_cause_t wakeup_reason = esp_sleep_get_wakeup_cause();
     if (wakeup_reason == ESP_SLEEP_WAKEUP_TIMER) {
         LOG_INFO("[POWER SAVER] Woke up from 15-Minute Deep Sleep Timer!");
-        String smsMsg = "[UGV-01 ALERT] System turned ON from Deep Sleep. Transmitting live tracking data for 2 minutes. Battery: " + String(bootBat, 2) + "V";
+        String smsMsg = "[UGV-01 ALERT] System turned ON from Deep Sleep. Transmitting live tracking data for 5 minutes. Battery: " + String(bootBat, 2) + "V";
         sendAlertSMS(_modem, smsMsg);
     }
 
@@ -159,7 +159,7 @@ void Tracker::handleState() {
                 
                 uint32_t stationaryDuration = now - _stationaryStartMs;
                 if (stationaryDuration >= STATIONARY_TIMEOUT_MS) {
-                    LOG_INFO("[POWER SAVER] Vehicle stationary for 2 minutes! Transitioning to PARKED_SLEEP...");
+                    LOG_INFO("[POWER SAVER] Active search window reached 5 minutes! Transitioning to PARKED_SLEEP...");
                     setState(TrackerState::PARKED_SLEEP);
                     break;
                 }
