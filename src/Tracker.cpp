@@ -11,6 +11,24 @@ static float readBatteryVoltage() {
     return batteryVoltage;
 }
 
+static void sendAlertSMS(EC200U &modem, const String &message) {
+#if ENABLE_SMS_ALERTS
+    String numbers[3] = {
+        String(SMS_PHONE_NUMBER_1),
+        String(SMS_PHONE_NUMBER_2),
+        String(SMS_PHONE_NUMBER_3)
+    };
+
+    for (int i = 0; i < 3; i++) {
+        numbers[i].trim();
+        if (numbers[i].length() >= 10 && !numbers[i].equalsIgnoreCase("+919876543210") && !numbers[i].equalsIgnoreCase("+910000000000")) {
+            modem.sendSMS(numbers[i], message);
+            delay(1500);
+        }
+    }
+#endif
+}
+
 Tracker::Tracker() 
     : _gps(_modem), 
       _network(_modem), 
@@ -37,6 +55,8 @@ bool Tracker::begin() {
     esp_sleep_wakeup_cause_t wakeup_reason = esp_sleep_get_wakeup_cause();
     if (wakeup_reason == ESP_SLEEP_WAKEUP_TIMER) {
         LOG_INFO("[POWER SAVER] Woke up from 15-Minute Deep Sleep Timer!");
+        String smsMsg = "[UGV-01 ALERT] System turned ON from Deep Sleep. Transmitting live tracking data for 2 minutes. Battery: " + String(bootBat, 2) + "V";
+        sendAlertSMS(_modem, smsMsg);
     }
 
     setState(TrackerState::BOOT);
@@ -163,8 +183,10 @@ void Tracker::handleState() {
 
             // Emergency Low Battery Death Alert
             if (tData.batteryVoltage < BATTERY_LOW_CUTOFF) {
-                LOG_ERROR("[CRITICAL BATTERY] Voltage dropped to " + String(tData.batteryVoltage, 2) + "V! Transmitting Death Alert Packet...");
+                LOG_ERROR("[CRITICAL BATTERY] Voltage dropped to " + String(tData.batteryVoltage, 2) + "V! Transmitting Death Alert Packet & SMS...");
                 tData.gps.fixMode = 9; // FixMode 9 = Emergency Low Battery Death Flag
+                String smsMsg = "[UGV-01 CRITICAL] Low Battery Alert! Voltage dropped to " + String(tData.batteryVoltage, 2) + "V. System shutting down soon.";
+                sendAlertSMS(_modem, smsMsg);
             }
 
             int httpCode1 = 0, httpCode2 = 0;

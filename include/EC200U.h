@@ -21,6 +21,7 @@ public:
     bool waitForNetwork(uint32_t timeoutMs = 30000);
     int getSignalStrength(); // Returns CSQ (0..31, 99)
     bool setLowPowerMode(bool enable);
+    bool sendSMS(const String &phoneNumber, const String &message);
 
     // GPS / GNSS operations
     bool enableGPS();

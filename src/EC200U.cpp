@@ -518,3 +518,30 @@ bool EC200U::setLowPowerMode(bool enable) {
         return true;
     }
 }
+
+bool EC200U::sendSMS(const String &phoneNumber, const String &message) {
+    if (phoneNumber.length() == 0 || phoneNumber.equalsIgnoreCase("+910000000000")) return false;
+    LOG_INFO("Sending SMS to " + phoneNumber + ": " + message);
+
+    sendAT("AT+CMGF=1", 1000); // Set SMS Text Mode
+    _serial->println("AT+CMGS=\"" + phoneNumber + "\"");
+    
+    if (!waitForResponse(">", 5000)) {
+        LOG_ERROR("Failed to get SMS prompt '>'");
+        while (_serial->available()) _serial->read();
+        return false;
+    }
+
+    _serial->print(message);
+    _serial->write(26); // Send Ctrl+Z (0x1A) to transmit SMS
+
+    if (waitForResponse("+CMGS:", 10000)) {
+        LOG_INFO("SMS Sent Successfully to " + phoneNumber);
+        while (_serial->available()) _serial->read();
+        return true;
+    }
+
+    LOG_ERROR("SMS Transmission Failed for " + phoneNumber);
+    while (_serial->available()) _serial->read();
+    return false;
+}
