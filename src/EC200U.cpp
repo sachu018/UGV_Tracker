@@ -531,6 +531,7 @@ bool EC200U::sendSMS(const String &phoneNumber, const String &message) {
     sendAT("AT+CSCS=\"GSM\"", 1000);              // Set TE character set to GSM
     sendAT("AT+CSMP=17,167,0,0", 1000);           // Set text mode parameters
     sendAT("AT+CPMS=\"SM\",\"SM\",\"SM\"", 1000); // Select SIM SMS memory storage
+    sendAT("AT+CGSMS=1", 1000);                   // Select LTE packet domain service for MO SMS
 
     while (_serial->available()) _serial->read();
     _serial->print("AT+CMGS=\"" + phoneNumber + "\"\r");
