@@ -519,7 +519,12 @@ bool EC200U::sendSMS(const String &phoneNumber, const String &message) {
     if (phoneNumber.length() == 0 || phoneNumber.equalsIgnoreCase("+910000000000")) return false;
     LOG_INFO("Sending SMS to " + phoneNumber + ": " + message);
 
-    sendAT("AT+CMGF=1", 1000); // Set SMS Text Mode
+    sendAT("AT+CFUN=1", 1000);         // Ensure full RF mode is enabled for SMS transmission
+    sendAT("AT+CSCS=\"GSM\"", 1000);   // Set TE character set to GSM
+    sendAT("AT+CMGF=1", 1000);         // Set SMS Text Mode
+    sendAT("AT+CSMP=17,167,0,0", 1000);// Set text mode parameters for standard GSM SMS
+
+    while (_serial->available()) _serial->read();
     _serial->println("AT+CMGS=\"" + phoneNumber + "\"");
     
     if (!waitForResponse(">", 5000)) {
@@ -531,7 +536,7 @@ bool EC200U::sendSMS(const String &phoneNumber, const String &message) {
     _serial->print(message);
     _serial->write(26); // Send Ctrl+Z (0x1A) to transmit SMS
 
-    if (waitForResponse("+CMGS:", 10000)) {
+    if (waitForResponse("+CMGS:", 12000)) {
         LOG_INFO("SMS Sent Successfully to " + phoneNumber);
         while (_serial->available()) _serial->read();
         return true;

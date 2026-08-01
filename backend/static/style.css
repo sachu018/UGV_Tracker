@@ -340,6 +340,18 @@ body {
 }
 
 .text-green { color: var(--accent) !important; }
+.text-blue { color: var(--primary) !important; }
+.text-warning { color: var(--warning) !important; }
+
+.clock-schedule-card {
+    background: linear-gradient(135deg, #FFFFFF, #F1F5F9);
+    border: 1px solid rgba(2, 132, 199, 0.2);
+    box-shadow: 0 4px 14px rgba(2, 132, 199, 0.05);
+}
+
+.clock-schedule-card .titem strong {
+    font-family: var(--font-mono);
+}
 
 /* Location Card */
 .location-card {

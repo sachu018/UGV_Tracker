@@ -35,7 +35,16 @@ document.addEventListener("DOMContentLoaded", () => {
     initControls();
     fetchHistory();
     setInterval(fetchLatestTelemetry, 2000);
+    setInterval(updateLiveClock, 1000);
+    updateLiveClock();
 });
+
+function updateLiveClock() {
+    const now = new Date();
+    const clockStr = now.toLocaleTimeString('en-US', { hour12: true, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    const clockElem = document.getElementById("liveClockVal");
+    if (clockElem) clockElem.innerText = clockStr;
+}
 
 function initMap() {
     const initialLat = 10.8087;
@@ -207,10 +216,10 @@ function updateDashboard(data) {
     const bat = data.battery || 4.2;
     const batElement = document.getElementById("batteryVal");
     batElement.innerText = `${bat.toFixed(2)}V`;
-    if (bat < 3.3) {
+    if (bat < 3.40) {
         batElement.style.color = "#EF4444";
         batElement.innerText = `${bat.toFixed(2)}V (CRITICAL LOW)`;
-    } else if (bat < 3.6) {
+    } else if (bat < 3.65) {
         batElement.style.color = "#F59E0B";
     } else {
         batElement.style.color = "#10B981";
@@ -228,27 +237,48 @@ function updateDashboard(data) {
     document.getElementById("netStatusVal").innerText = "Registered (4G LTE)";
     document.getElementById("netStatusVal").className = "text-green";
 
-    // Next Packet Countdown Timer
+    // Datetime Clock & Sleep Schedule Timers
     const countdownElement = document.getElementById("countdownVal");
+    const lastPacketElement = document.getElementById("lastPacketTimeVal");
+    const activeTimerElement = document.getElementById("activeTimerVal");
+    const nextSleepElement = document.getElementById("nextSleepTimerVal");
+
     if (data.created_at) {
         try {
             const lastTime = new Date(data.created_at + " Z").getTime();
             const nowTime = new Date().getTime();
             const elapsedSec = Math.floor((nowTime - lastTime) / 1000);
-            const parkedIntervalSec = 15 * 60; // 15 minutes sleep
-            const remainingSec = Math.max(0, parkedIntervalSec - elapsedSec);
 
-            if (remainingSec > 0 && remainingSec < 900) {
-                const mins = Math.floor(remainingSec / 60);
-                const secs = remainingSec % 60;
-                countdownElement.innerText = `In ${mins}m ${secs}s`;
-                countdownElement.className = "text-green";
+            // Format Last Packet Time
+            const packetDate = new Date(data.created_at + " Z");
+            if (lastPacketElement) {
+                lastPacketElement.innerText = packetDate.toLocaleTimeString('en-US', { hour12: true, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            }
+
+            const activeWindowMaxSec = 5 * 60; // 5 minutes active
+            const sleepIntervalSec = 15 * 60;   // 15 minutes sleep
+
+            if (isOnline) {
+                const activeElapsed = Math.min(activeWindowMaxSec, elapsedSec);
+                const activeMins = Math.floor(activeElapsed / 60);
+                const activeSecs = activeElapsed % 60;
+                if (activeTimerElement) activeTimerElement.innerText = `Active ${activeMins}m ${activeSecs}s / 5m`;
+
+                const sleepInSec = Math.max(0, activeWindowMaxSec - elapsedSec);
+                const sleepMins = Math.floor(sleepInSec / 60);
+                const sleepSecs = sleepInSec % 60;
+                if (nextSleepElement) nextSleepElement.innerText = `Sleep in ${sleepMins}m ${sleepSecs}s`;
+                if (countdownElement) countdownElement.innerText = `Sleep in ${sleepMins}m ${sleepSecs}s`;
             } else {
-                countdownElement.innerText = "Active Tracking";
-                countdownElement.className = "text-green";
+                if (activeTimerElement) activeTimerElement.innerText = "In Deep Sleep";
+                const wakeInSec = Math.max(0, sleepIntervalSec - elapsedSec);
+                const wakeMins = Math.floor(wakeInSec / 60);
+                const wakeSecs = wakeInSec % 60;
+                if (nextSleepElement) nextSleepElement.innerText = `Wake in ${wakeMins}m ${wakeSecs}s`;
+                if (countdownElement) countdownElement.innerText = `Wake in ${wakeMins}m ${wakeSecs}s`;
             }
         } catch(e) {
-            countdownElement.innerText = "Active Tracking";
+            if (countdownElement) countdownElement.innerText = "Active Tracking";
         }
     }
 

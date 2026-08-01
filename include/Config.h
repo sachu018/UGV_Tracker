@@ -29,7 +29,7 @@
 
 // Battery Voltage Measurement (GPIO 34 ADC Voltage Divider: 100k + 100k)
 #define BATTERY_ADC_PIN     34
-#define BATTERY_LOW_CUTOFF  3.30f  // Critical Low Battery Voltage threshold
+#define BATTERY_LOW_CUTOFF  3.40f  // Critical Low Battery Voltage threshold (< 3.4V)
 
 // Timing & Retries
 #define GPS_POLL_INTERVAL_MS      2000   // 2 seconds
@@ -44,7 +44,7 @@
 // SMS Alert Notifications Configuration (Wakeup & Low Battery Alerts)
 #define ENABLE_SMS_ALERTS        true
 #define SMS_PHONE_NUMBER_1       "+916238227874"  // Primary recipient number
-#define SMS_PHONE_NUMBER_2       ""               // Optional 2nd recipient number
+#define SMS_PHONE_NUMBER_2       "+918137896946"  // Secondary recipient number
 #define SMS_PHONE_NUMBER_3       ""               // Optional 3rd recipient number
 
 #endif // CONFIG_H
