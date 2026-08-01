@@ -14,6 +14,8 @@ static float readBatteryVoltage() {
     return batteryVoltage;
 }
 
+static bool g_lowBatterySmsSent = false;
+
 static void sendAlertSMS(EC200U &modem, const String &message) {
 #if ENABLE_SMS_ALERTS
     String numbers[3] = {
@@ -25,7 +27,16 @@ static void sendAlertSMS(EC200U &modem, const String &message) {
     for (int i = 0; i < 3; i++) {
         numbers[i].trim();
         if (numbers[i].length() >= 10 && !numbers[i].equalsIgnoreCase("+919876543210") && !numbers[i].equalsIgnoreCase("+910000000000")) {
-            modem.sendSMS(numbers[i], message);
+            LOG_INFO("SMS Dispatch [Attempt 1/2] to " + numbers[i]);
+            bool success = modem.sendSMS(numbers[i], message);
+            
+            // Automatic 1x Retry on Failure
+            if (!success) {
+                LOG_ERROR("[SMS RETRY] Attempt 1 failed for " + numbers[i] + ". Retrying in 2 seconds...");
+                delay(2000);
+                LOG_INFO("SMS Dispatch [Attempt 2/2 Retry] to " + numbers[i]);
+                success = modem.sendSMS(numbers[i], message);
+            }
             delay(1500);
         }
     }
@@ -184,12 +195,18 @@ void Tracker::handleState() {
             tData.batteryVoltage = readBatteryVoltage(); // Live GPIO 34 ADC Battery Reading
             tData.state = _state;
 
-            // Emergency Low Battery Death Alert
+            // Emergency Low Battery Death Alert (Single SMS per low-battery event)
             if (tData.batteryVoltage < BATTERY_LOW_CUTOFF) {
-                LOG_ERROR("[CRITICAL BATTERY] Voltage dropped to " + String(tData.batteryVoltage, 2) + "V! Transmitting Death Alert Packet & SMS...");
+                LOG_ERROR("[CRITICAL BATTERY] Voltage dropped to " + String(tData.batteryVoltage, 2) + "V!");
                 tData.gps.fixMode = 9; // FixMode 9 = Emergency Low Battery Death Flag
-                String smsMsg = "[UGV-01 CRITICAL] Low Battery Alert! Voltage dropped to " + String(tData.batteryVoltage, 2) + "V. System shutting down soon.";
-                sendAlertSMS(_modem, smsMsg);
+                if (!g_lowBatterySmsSent) {
+                    g_lowBatterySmsSent = true;
+                    LOG_INFO("Triggering Single Low-Battery Emergency SMS Alert to all recipients...");
+                    String smsMsg = "[UGV-01 CRITICAL] Low Battery Alert! Voltage dropped to " + String(tData.batteryVoltage, 2) + "V. System shutting down soon.";
+                    sendAlertSMS(_modem, smsMsg);
+                }
+            } else {
+                g_lowBatterySmsSent = false; // Reset single SMS flag when battery recovers above 3.40V
             }
 
             int httpCode1 = 0, httpCode2 = 0;

@@ -526,32 +526,44 @@ bool EC200U::sendSMS(const String &phoneNumber, const String &message) {
     if (phoneNumber.length() == 0 || phoneNumber.equalsIgnoreCase("+910000000000")) return false;
     LOG_INFO("Sending SMS to " + phoneNumber + ": " + message);
 
-    sendAT("AT+CFUN=1", 1000);         // Ensure full RF mode is enabled for SMS transmission
-    sendAT("AT+CMGF=1", 1000);         // Set SMS Text Mode
-    sendAT("AT+CSCS=\"GSM\"", 1000);   // Set TE character set to GSM
-    sendAT("AT+CSMP=17,167,0,0", 1000);// Set text mode parameters for standard GSM SMS
+    sendAT("AT+CFUN=1", 1000);                    // Full RF mode
+    sendAT("AT+CMGF=1", 1000);                    // Set SMS Text Mode
+    sendAT("AT+CSCS=\"GSM\"", 1000);              // Set TE character set to GSM
+    sendAT("AT+CSMP=17,167,0,0", 1000);           // Set text mode parameters
+    sendAT("AT+CPMS=\"SM\",\"SM\",\"SM\"", 1000); // Select SIM SMS memory storage
 
     while (_serial->available()) _serial->read();
     _serial->print("AT+CMGS=\"" + phoneNumber + "\"\r");
     
     if (!waitForResponse(">", 5000)) {
-        LOG_ERROR("Failed to get SMS prompt '>'");
+        LOG_ERROR("Failed to get SMS prompt '>' from modem.");
         while (_serial->available()) _serial->read();
         return false;
     }
 
-    delay(100);
+    delay(200);
     _serial->print(message);
     _serial->write(26); // Send Ctrl+Z (0x1A) to transmit SMS
 
-    if (waitForResponse("+CMGS:", 12000)) {
-        LOG_INFO("SMS Sent Successfully to " + phoneNumber);
-        while (_serial->available()) _serial->read();
-        return true;
+    uint32_t start = millis();
+    String resp = "";
+    while (millis() - start < 15000) {
+        while (_serial->available()) {
+            char c = (char)_serial->read();
+            resp += c;
+        }
+        if (resp.indexOf("+CMGS:") != -1 || resp.indexOf("OK") != -1) {
+            LOG_INFO("SMS Sent Successfully to " + phoneNumber + " | Resp: " + resp);
+            return true;
+        }
+        if (resp.indexOf("+CMS ERROR:") != -1 || resp.indexOf("ERROR") != -1) {
+            LOG_ERROR("Modem returned error during SMS dispatch: " + resp);
+            return false;
+        }
+        delay(50);
     }
 
-    LOG_ERROR("SMS Transmission Failed for " + phoneNumber);
-    while (_serial->available()) _serial->read();
+    LOG_ERROR("SMS Timeout for " + phoneNumber + " | Raw Response: " + resp);
     return false;
 }
 
