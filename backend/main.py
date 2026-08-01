@@ -82,32 +82,33 @@ async def receive_get_telemetry(
 
 from datetime import datetime, timezone
 
+def parse_db_datetime(date_str: str) -> datetime:
+    if not date_str:
+        return datetime.now(timezone.utc)
+    date_clean = str(date_str).split("+")[0].split("Z")[0].strip()
+    for fmt in ("%Y-%m-%d %H:%M:%S", "%Y-%m-%d %H:%M:%S.%f", "%Y-%m-%dT%H:%M:%S", "%Y-%m-%dT%H:%M:%S.%f"):
+        try:
+            return datetime.strptime(date_clean, fmt).replace(tzinfo=timezone.utc)
+        except ValueError:
+            pass
+    return datetime.now(timezone.utc)
+
 # 3. Latest Telemetry Endpoint (Web Dashboard Polling with 45s Heartbeat Check)
 @app.get("/api/v1/telemetry/latest")
 async def get_latest():
     latest = database.get_latest_telemetry()
     if latest:
-        # Check timestamp freshness (Heartbeat timeout = 45 seconds)
-        is_online = True
-        record_time = None
-        try:
-            created_at_str = latest.get("created_at")
-            if created_at_str:
-                # Parse created_at format: YYYY-MM-DD HH:MM:SS
-                record_time = datetime.strptime(created_at_str, "%Y-%m-%d %H:%M:%S").replace(tzinfo=timezone.utc)
-                now_time = datetime.now(timezone.utc)
-                age_seconds = (now_time - record_time).total_seconds()
-                if age_seconds > 45:
-                    is_online = False
-        except Exception:
-            pass
+        created_at_str = latest.get("created_at")
+        record_time = parse_db_datetime(created_at_str)
+        now_time = datetime.now(timezone.utc)
+        age_seconds = (now_time - record_time).total_seconds()
+        
+        is_online = (age_seconds <= 45)
 
-        # Copy data and apply ISO timestamp formatting
         latest_data = dict(latest)
         latest_data["online"] = is_online
-        latest_data["server_now_utc"] = datetime.now(timezone.utc).isoformat()
-        if record_time:
-            latest_data["created_at_iso"] = record_time.isoformat()
+        latest_data["server_now_utc"] = now_time.isoformat()
+        latest_data["created_at_iso"] = record_time.isoformat()
 
         if not is_online:
             latest_data["speed"] = 0.0

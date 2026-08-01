@@ -49,9 +49,9 @@ function updateLiveClock() {
     if (clockElem) clockElem.innerText = clockStr;
 
     // Ticking Schedule Timers strictly based on ESP32 last transmission timestamp!
-    if (lastKnownPacketTimeMs) {
-        const nowTime = now.getTime();
-        const elapsedSec = Math.max(0, Math.floor((nowTime - lastKnownPacketTimeMs) / 1000));
+    const refPacketTime = lastKnownPacketTimeMs || Date.now();
+    const nowTime = now.getTime();
+    const elapsedSec = Math.max(0, Math.floor((nowTime - refPacketTime) / 1000));
         
         const activeWindowMaxSec = 5 * 60; // 5 minutes active
         const sleepIntervalSec = 15 * 60;   // 15 minutes sleep
@@ -79,7 +79,6 @@ function updateLiveClock() {
             if (nextSleepElement) nextSleepElement.innerText = `Wake in ${wakeMins}m ${wakeSecs}s`;
             if (countdownElement) countdownElement.innerText = `Wake in ${wakeMins}m ${wakeSecs}s`;
         }
-    }
 }
 
 function initMap() {
