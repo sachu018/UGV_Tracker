@@ -511,13 +511,13 @@ bool EC200U::getHTTP(const String &url, int &httpCode, String &responseBody) {
 
 bool EC200U::setLowPowerMode(bool enable) {
     if (enable) {
-        LOG_INFO("Configuring EC200U Modem for Deep Sleep Low-Power Mode...");
-        disableGPS();
-        sendAT("AT+CFUN=4", 2000); // Minimum functionality / Disable RF transceiver
+        LOG_INFO("Configuring EC200U Modem for Deep Sleep (4G SIM Radio OFF, GNSS Active)...");
+        // Keep GNSS engine active for instant Hot Start GPS fix upon wakeup
+        sendAT("AT+CFUN=4", 2000); // Disable 4G SIM RF transceiver only
         return true;
     } else {
-        LOG_INFO("Waking EC200U Modem from Low-Power Mode...");
-        sendAT("AT+CFUN=1", 2000); // Re-enable full RF transceiver
+        LOG_INFO("Waking EC200U 4G SIM Radio from Low-Power Mode...");
+        sendAT("AT+CFUN=1", 2000); // Re-enable full 4G SIM RF transceiver
         return true;
     }
 }
