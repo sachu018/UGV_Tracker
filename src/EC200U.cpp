@@ -527,12 +527,12 @@ bool EC200U::sendSMS(const String &phoneNumber, const String &message) {
     LOG_INFO("Sending SMS to " + phoneNumber + ": " + message);
 
     sendAT("AT+CFUN=1", 1000);         // Ensure full RF mode is enabled for SMS transmission
-    sendAT("AT+CSCS=\"GSM\"", 1000);   // Set TE character set to GSM
     sendAT("AT+CMGF=1", 1000);         // Set SMS Text Mode
+    sendAT("AT+CSCS=\"GSM\"", 1000);   // Set TE character set to GSM
     sendAT("AT+CSMP=17,167,0,0", 1000);// Set text mode parameters for standard GSM SMS
 
     while (_serial->available()) _serial->read();
-    _serial->println("AT+CMGS=\"" + phoneNumber + "\"");
+    _serial->print("AT+CMGS=\"" + phoneNumber + "\"\r");
     
     if (!waitForResponse(">", 5000)) {
         LOG_ERROR("Failed to get SMS prompt '>'");
@@ -540,6 +540,7 @@ bool EC200U::sendSMS(const String &phoneNumber, const String &message) {
         return false;
     }
 
+    delay(100);
     _serial->print(message);
     _serial->write(26); // Send Ctrl+Z (0x1A) to transmit SMS
 

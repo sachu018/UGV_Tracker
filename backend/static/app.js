@@ -249,7 +249,7 @@ function updateDashboard(data) {
     }
 
     // 2. Battery & Signal CSQ Status (GPIO 34 ADC Voltage Divider)
-    const bat = data.battery || 4.2;
+    const bat = (data.battery !== undefined && data.battery !== null) ? data.battery : 4.2;
     const batElement = document.getElementById("batteryVal");
     batElement.innerText = `${bat.toFixed(2)}V`;
     if (bat < 3.40) {
