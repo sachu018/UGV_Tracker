@@ -215,28 +215,33 @@ async function fetchLatestTelemetry() {
         console.error("Error fetching latest telemetry:", e);
         setSystemOffline();
     }
-}
-
-function setSystemOffline() {
+}function setSystemOffline() {
     const powerChip = document.getElementById("systemPowerChip");
     powerChip.className = "system-power-chip unpowered";
-    document.getElementById("powerText").innerText = "UNPOWERED / OFFLINE";
+    document.getElementById("powerText").innerText = "PARKED / DEEP SLEEP";
 
     const motionBadge = document.getElementById("motionStatusBadge");
     motionBadge.className = "motion-chip parked";
-    motionBadge.innerText = "OFFLINE";
+    motionBadge.innerText = "PARKED SLEEP";
 
-    document.getElementById("fixModeBadge").innerText = "Hardware Offline";
-    document.getElementById("fixModeBadge").style.color = "#EF4444";
-    document.getElementById("netStatusVal").innerText = "Disconnected";
-    document.getElementById("netStatusVal").className = "";
-    document.getElementById("gpsModuleState").innerText = "Unpowered";
-    document.getElementById("gpsModuleState").className = "";
+    document.getElementById("fixModeBadge").innerText = "Sleep Mode (RF Standby)";
+    document.getElementById("fixModeBadge").style.color = "#F59E0B";
+    document.getElementById("netStatusVal").innerText = "Standby (Low Power)";
+    document.getElementById("netStatusVal").className = "text-warning";
+    document.getElementById("gpsModuleState").innerText = "GNSS Tracking Active";
+    document.getElementById("gpsModuleState").className = "text-green";
     document.getElementById("speedVal").innerText = "0.0";
 }
 
 function updateDashboard(data) {
     const isOnline = (data.online !== false);
+    latestOnlineState = isOnline;
+
+    if (data.created_at_iso) {
+        lastKnownPacketTimeMs = new Date(data.created_at_iso).getTime();
+    } else if (data.created_at) {
+        lastKnownPacketTimeMs = new Date(data.created_at.replace(" ", "T") + "Z").getTime();
+    }
 
     // 1. Prominent System Power & Online Status
     const powerChip = document.getElementById("systemPowerChip");
@@ -245,10 +250,15 @@ function updateDashboard(data) {
         document.getElementById("powerText").innerText = "SYSTEM POWERED & ONLINE";
     } else {
         setSystemOffline();
-        return;
     }
 
-    // 2. Battery & Signal CSQ Status (GPIO 34 ADC Voltage Divider)
+    // Format Last Packet Time
+    if (lastKnownPacketTimeMs) {
+        const lastPacketElement = document.getElementById("lastPacketTimeVal");
+        if (lastPacketElement) {
+            lastPacketElement.innerText = new Date(lastKnownPacketTimeMs).toLocaleTimeString('en-US', { hour12: true, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        }
+    }  // 2. Battery & Signal CSQ Status (GPIO 34 ADC Voltage Divider)
     const bat = (data.battery !== undefined && data.battery !== null) ? data.battery : 4.2;
     const batElement = document.getElementById("batteryVal");
     batElement.innerText = `${bat.toFixed(2)}V`;
