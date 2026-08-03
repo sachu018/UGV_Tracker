@@ -132,18 +132,20 @@ int EC200U::getSignalStrength() {
 }
 
 bool EC200U::enableGPS() {
-    LOG_INFO("Enabling EC200U GNSS/GPS (Multi-Constellation Full Sensitivity)...");
+    LOG_INFO("Enabling EC200U GNSS/GPS (Multi-Constellation + Cellular AGPS Force Fix)...");
     sendAT("AT+CFUN=1", 1000);                      // 1. Force 4G RF modem engine to full power
     sendAT("AT+QGPSEND", 1000);                     // 2. Stop any stuck previous GNSS session
     sendAT("AT+QGPSCFG=\"gnssconfig\",7", 1000);    // 3. Enable All Constellations (GPS + GLONASS + BeiDou + Galileo)
-    sendAT("AT+QGPSCFG=\"nmeasrc\",1", 1000);       // 4. Enable NMEA output stream
-    sendAT("AT+QGPSDEL=0", 1000);                   // 5. Purge stuck ephemeris/almanac memory cache (Cold Start Fix)
-    String resp = sendAT("AT+QGPS=1", 2000);        // 6. Start GNSS engine
+    sendAT("AT+QGPSCFG=\"agpsbyap\",1", 1000);      // 4. Enable Cellular AGPS Assistance for Instant Fix
+    sendAT("AT+QGPSCFG=\"plane\",0", 1000);         // 5. Standalone High Precision GNSS Mode
+    sendAT("AT+QGPSCFG=\"nmeasrc\",1", 1000);       // 6. Enable NMEA output stream
+    sendAT("AT+QGPSDEL=0", 1000);                   // 7. Purge stuck ephemeris memory cache
+    String resp = sendAT("AT+QGPS=1", 2000);        // 8. Start GNSS engine
     
     // CME ERROR 504 means GNSS is already turned on
     if (resp.indexOf("OK") != -1 || resp.indexOf("504") != -1) {
         _isGpsEnabled = true;
-        LOG_INFO("GPS enabled successfully with full multi-constellation sensitivity.");
+        LOG_INFO("GPS enabled successfully with Forced AGPS Cellular Assistance.");
         return true;
     }
 
