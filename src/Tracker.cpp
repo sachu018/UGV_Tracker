@@ -128,25 +128,7 @@ void Tracker::handleState() {
             _gps.update();
             _gps.printDebug();
 
-            GPSData gData = _gps.getData();
             uint32_t now = millis();
-
-            // Stationary Motion Detector (Trigger Deep Sleep if stationary for 2 mins)
-            if (gData.speed < 2.0f) {
-                if (_stationaryStartMs == 0) {
-                    _stationaryStartMs = now;
-                }
-                
-                uint32_t stationaryDuration = now - _stationaryStartMs;
-                if (stationaryDuration >= STATIONARY_TIMEOUT_MS) {
-                    LOG_INFO("[POWER SAVER] Active search window reached 5 minutes! Transitioning to PARKED_SLEEP...");
-                    setState(TrackerState::PARKED_SLEEP);
-                    break;
-                }
-            } else {
-                _stationaryStartMs = 0; // Reset timer when real movement occurs
-            }
-
             if (now - _lastUploadMs >= TELEMETRY_INTERVAL_MS) {
                 _lastUploadMs = now;
                 setState(TrackerState::UPLOAD);
@@ -166,7 +148,7 @@ void Tracker::handleState() {
 
             // Emergency Low Battery Death Alert
             if (tData.batteryVoltage < BATTERY_LOW_CUTOFF) {
-                LOG_ERROR("[CRITICAL BATTERY] Voltage dropped to " + String(tData.batteryVoltage, 2) + "V! Transmitting Death Alert Packet...");
+                LOG_ERROR("[CRITICAL BATTERY] Voltage dropped to " + String(tData.batteryVoltage, 2) + "V!");
                 tData.gps.fixMode = 9; // FixMode 9 = Emergency Low Battery Death Flag
             }
 
@@ -203,46 +185,8 @@ void Tracker::handleState() {
         }
 
         case TrackerState::PARKED_SLEEP: {
-            LOG_INFO("=========================================");
-            LOG_INFO(" Uploading Final Parked Status Packet ");
-            LOG_INFO("=========================================");
-
-            TelemetryData tData;
-            tData.deviceId = DEVICE_ID;
-            tData.gps = _gps.getData();
-            tData.gps.speed = 0.0;
-            tData.signalRssi = _network.getSignalStrength();
-            tData.batteryVoltage = readBatteryVoltage();
-            tData.state = _state;
-
-            int httpCode1 = 0, httpCode2 = 0;
-            String respBody1, respBody2;
-            String queryParams = "?field1=" + String(tData.gps.latitude, 6) +
-                                 "&field2=" + String(tData.gps.longitude, 6) +
-                                 "&field3=0.00" +
-                                 "&field4=" + String(tData.gps.satellites) +
-                                 "&field5=" + String(tData.gps.altitude, 1) +
-                                 "&field6=" + String(tData.signalRssi) +
-                                 "&field7=" + String(tData.batteryVoltage, 2) +
-                                 "&field8=" + String(tData.gps.fixMode) +
-                                 "&device_id=" + tData.deviceId +
-                                 "&key=" + String(DEVICE_API_KEY);
-
-            _modem.getHTTP(String(VENDOR_SERVER_URL) + queryParams, httpCode1, respBody1);
-            _modem.getHTTP(String(RENDER_SERVER_URL) + queryParams, httpCode2, respBody2);
-
-            LOG_INFO("=========================================");
-            LOG_INFO(" ENTIRE SYSTEM ENTERING DEEP SLEEP NOW ");
-            LOG_INFO(" Duration: 15 Minutes (900 Seconds) ");
-            LOG_INFO(" ESP32 Power: ~10 uA | Modem: Low-Power ");
-            LOG_INFO(" Battery Voltage: " + String(tData.batteryVoltage, 2) + "V ");
-            LOG_INFO("=========================================");
-
-            _modem.setLowPowerMode(true);
-            delay(500);
-
-            esp_sleep_enable_timer_wakeup(PARKED_SLEEP_INTERVAL_SEC * 1000000ULL);
-            esp_deep_sleep_start();
+            // Continuous Testing Mode: Redirect immediately to TRACK (no Deep Sleep)
+            setState(TrackerState::TRACK);
             break;
         }
 

@@ -116,30 +116,8 @@ async def get_latest():
         # Hardware is online if last packet arrived within 45 seconds
         is_online = (elapsed_since_last_packet <= 45)
 
-        ACTIVE_WINDOW_SEC = 300  # 5 Minutes active tracking
-        SLEEP_WINDOW_SEC = 900   # 15 Minutes deep sleep
-        TOTAL_CYCLE_SEC = ACTIVE_WINDOW_SEC + SLEEP_WINDOW_SEC
-
-        if elapsed_since_boot < ACTIVE_WINDOW_SEC:
-            # System is in 5-Minute Active Window
-            mode = "ACTIVE_TRACKING"
-            active_elapsed_sec = elapsed_since_boot
-            active_remaining_sec = ACTIVE_WINDOW_SEC - elapsed_since_boot
-            sleep_remaining_sec = active_remaining_sec
-            next_wakeup_dt = session_start_dt + timedelta(seconds=TOTAL_CYCLE_SEC)
-        else:
-            # System is in 15-Minute Deep Sleep
-            mode = "PARKED_SLEEP"
-            active_elapsed_sec = ACTIVE_WINDOW_SEC
-            active_remaining_sec = 0
-            sleep_elapsed_sec = elapsed_since_boot - ACTIVE_WINDOW_SEC
-            sleep_remaining_sec = max(0, SLEEP_WINDOW_SEC - sleep_elapsed_sec)
-            next_wakeup_dt = session_start_dt + timedelta(seconds=TOTAL_CYCLE_SEC)
-
-        # Convert timestamps to IST (Indian Standard Time UTC+5:30)
+        mode = "CONTINUOUS_LIVE"
         last_packet_ist = last_packet_dt.astimezone(IST).strftime("%I:%M:%S %p")
-        last_wakeup_ist = session_start_dt.astimezone(IST).strftime("%I:%M:%S %p")
-        next_wakeup_ist = next_wakeup_dt.astimezone(IST).strftime("%I:%M:%S %p")
 
         latest_data = dict(latest)
         latest_data["online"] = is_online
@@ -147,13 +125,8 @@ async def get_latest():
         latest_data["created_at_iso"] = last_packet_dt.isoformat()
         latest_data["schedule"] = {
             "mode": mode,
-            "elapsed_since_boot_sec": elapsed_since_boot,
-            "active_elapsed_sec": active_elapsed_sec,
-            "active_remaining_sec": active_remaining_sec,
-            "sleep_remaining_sec": sleep_remaining_sec,
-            "last_packet_time_ist": last_packet_ist,
-            "last_wakeup_time_ist": last_wakeup_ist,
-            "next_wakeup_time_ist": next_wakeup_ist
+            "elapsed_since_last_packet": elapsed_since_last_packet,
+            "last_packet_time_ist": last_packet_ist
         }
 
         if not is_online:

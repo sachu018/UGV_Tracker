@@ -132,17 +132,18 @@ int EC200U::getSignalStrength() {
 }
 
 bool EC200U::enableGPS() {
-    LOG_INFO("Enabling EC200U GNSS/GPS (Multi-Constellation)...");
-    sendAT("AT+CFUN=1", 1000);                      // 1. Force 4G RF modem engine to full power (400-500mA)
+    LOG_INFO("Enabling EC200U GNSS/GPS (Multi-Constellation Full Sensitivity)...");
+    sendAT("AT+CFUN=1", 1000);                      // 1. Force 4G RF modem engine to full power
     sendAT("AT+QGPSEND", 1000);                     // 2. Stop any stuck previous GNSS session
-    sendAT("AT+QGPSCFG=\"gnssconfig\",1", 1000);    // 3. Enable GPS + GLONASS + BeiDou + Galileo
-    sendAT("AT+QGPSCFG=\"outport\",\"none\"", 1000); // 4. Direct NMEA AT queries
-    String resp = sendAT("AT+QGPS=1", 2000);        // 5. Start GNSS engine
+    sendAT("AT+QGPSCFG=\"gnssconfig\",7", 1000);    // 3. Enable All Constellations (GPS + GLONASS + BeiDou + Galileo)
+    sendAT("AT+QGPSCFG=\"nmeasrc\",1", 1000);       // 4. Enable NMEA output stream
+    sendAT("AT+QGPSDEL=0", 1000);                   // 5. Purge stuck ephemeris/almanac memory cache (Cold Start Fix)
+    String resp = sendAT("AT+QGPS=1", 2000);        // 6. Start GNSS engine
     
     // CME ERROR 504 means GNSS is already turned on
     if (resp.indexOf("OK") != -1 || resp.indexOf("504") != -1) {
         _isGpsEnabled = true;
-        LOG_INFO("GPS enabled successfully.");
+        LOG_INFO("GPS enabled successfully with full multi-constellation sensitivity.");
         return true;
     }
 

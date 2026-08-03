@@ -47,31 +47,14 @@ function updateLiveClock() {
     const clockElem = document.getElementById("liveClockVal");
     if (clockElem) clockElem.innerText = clockStr;
 
-    // Direct rendering of backend-computed schedule parameters!
     if (latestSchedule) {
         const countdownElement = document.getElementById("countdownVal");
         const activeTimerElement = document.getElementById("activeTimerVal");
         const nextSleepElement = document.getElementById("nextSleepTimerVal");
 
-        if (latestSchedule.mode === "ACTIVE_TRACKING") {
-            const actRem = Math.max(0, latestSchedule.active_remaining_sec);
-            const actElapsed = Math.min(300, 300 - actRem);
-            const actMins = Math.floor(actElapsed / 60);
-            const actSecs = actElapsed % 60;
-            if (activeTimerElement) activeTimerElement.innerText = `Active ${actMins}m ${actSecs}s / 5m`;
-
-            const sleepMins = Math.floor(actRem / 60);
-            const sleepSecs = actRem % 60;
-            if (nextSleepElement) nextSleepElement.innerText = `Sleep in ${sleepMins}m ${sleepSecs}s`;
-            if (countdownElement) countdownElement.innerText = `Sleep in ${sleepMins}m ${sleepSecs}s`;
-        } else {
-            if (activeTimerElement) activeTimerElement.innerText = "In Deep Sleep";
-            const slpRem = Math.max(0, latestSchedule.sleep_remaining_sec);
-            const wakeMins = Math.floor(slpRem / 60);
-            const wakeSecs = slpRem % 60;
-            if (nextSleepElement) nextSleepElement.innerText = `Wake in ${wakeMins}m ${wakeSecs}s`;
-            if (countdownElement) countdownElement.innerText = `Wake in ${wakeMins}m ${wakeSecs}s`;
-        }
+        if (activeTimerElement) activeTimerElement.innerText = "24/7 Continuous Live";
+        if (nextSleepElement) nextSleepElement.innerText = "Power Saver OFF";
+        if (countdownElement) countdownElement.innerText = "Continuous 24/7";
     }
 }
 
